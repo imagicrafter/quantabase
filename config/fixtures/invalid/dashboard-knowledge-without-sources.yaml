@@ -1,0 +1,9 @@
+# `knowledge` needs its sources list.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  knowledge: { area_notes: {} }

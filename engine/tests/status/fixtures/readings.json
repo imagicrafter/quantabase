@@ -1,0 +1,763 @@
+{
+  "generated_at": "2026-11-07T18:00:00Z",
+  "connectors": [
+    {
+      "source": "drive",
+      "last_run_at": "2026-11-07T11:20:00Z",
+      "last_success_at": "2026-11-07T11:23:00Z",
+      "consecutive_failures": 0,
+      "last_error": null
+    },
+    {
+      "source": "fireflies",
+      "last_run_at": "2026-11-07T11:40:00Z",
+      "last_success_at": "2026-11-07T11:44:00Z",
+      "consecutive_failures": 0,
+      "last_error": null
+    },
+    {
+      "source": "wiki",
+      "last_run_at": "2026-11-07T11:00:00Z",
+      "last_success_at": "2026-10-24T11:00:00Z",
+      "consecutive_failures": 14,
+      "last_error": "refusing to remove 281 moved meeting sections"
+    }
+  ],
+  "review_undecided": 1,
+  "documents": [
+    {
+      "source": "drive",
+      "live": 234,
+      "approved": 131
+    },
+    {
+      "source": "fireflies",
+      "live": 197,
+      "approved": 171
+    },
+    {
+      "source": "gmail",
+      "live": 3,
+      "approved": 3
+    },
+    {
+      "source": "wiki",
+      "live": 1956,
+      "approved": 180
+    }
+  ],
+  "runs_daily": [
+    {
+      "day": "2026-10-25",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 36,
+      "minutes": 16.0
+    },
+    {
+      "day": "2026-10-25",
+      "source": "fireflies",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-10-25",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-10-26",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 0,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-10-26",
+      "source": "fireflies",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-10-26",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-10-27",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 3,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-10-27",
+      "source": "fireflies",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-10-27",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-10-28",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 1,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-10-28",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 1,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-10-28",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-10-29",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 1,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-10-29",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-10-29",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-10-30",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 0,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-10-30",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-10-30",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-10-31",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 0,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-10-31",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 1,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-10-31",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-11-01",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 2,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-11-01",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-11-01",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-11-02",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 2,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-11-02",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-11-02",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-11-03",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 0,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-11-03",
+      "source": "fireflies",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-11-03",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-11-04",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 1,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-11-04",
+      "source": "fireflies",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-11-04",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-11-05",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 1,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-11-05",
+      "source": "fireflies",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-11-05",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-11-06",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 0,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-11-06",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 1,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-11-06",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    },
+    {
+      "day": "2026-11-07",
+      "source": "drive",
+      "ok": true,
+      "checked": 234,
+      "changed": 1,
+      "minutes": 3.1
+    },
+    {
+      "day": "2026-11-07",
+      "source": "fireflies",
+      "ok": true,
+      "checked": 1,
+      "changed": 0,
+      "minutes": 0.4
+    },
+    {
+      "day": "2026-11-07",
+      "source": "wiki",
+      "ok": false,
+      "checked": 0,
+      "changed": 0,
+      "minutes": 0.0
+    }
+  ],
+  "review_waiting": [
+    {
+      "title": "Pat &amp; Sam Build Sessions",
+      "source": "wiki",
+      "domains": ["partners"]
+    }
+  ],
+  "areas": [
+    {
+      "domain": "consulting",
+      "sensitive": false,
+      "items": 158,
+      "sources": ["drive", "fireflies", "wiki"]
+    },
+    {
+      "domain": "content",
+      "sensitive": false,
+      "items": 46,
+      "sources": ["drive"]
+    },
+    {
+      "domain": "private",
+      "sensitive": true,
+      "items": 4,
+      "sources": ["drive"]
+    },
+    {
+      "domain": "unclassified",
+      "sensitive": true,
+      "items": 270,
+      "sources": ["drive", "fireflies"]
+    }
+  ],
+  "people": [
+    {
+      "handle": "owner",
+      "display_name": "Pat Owner",
+      "role": "administrator",
+      "active": true,
+      "email": "owner@example.com",
+      "updated_at": "2026-10-20T12:00:00Z",
+      "domains": ["private"]
+    },
+    {
+      "handle": "kb-engine",
+      "display_name": "KB Engine (embed-only)",
+      "role": "reader",
+      "active": true,
+      "email": null,
+      "updated_at": "2026-10-28T12:00:00Z",
+      "domains": []
+    },
+    {
+      "handle": "watch-embed",
+      "display_name": "Watcher embedding client",
+      "role": "reader",
+      "active": true,
+      "email": null,
+      "updated_at": "2026-11-06T12:00:00Z",
+      "domains": []
+    }
+  ],
+  "snapshot": {
+    "ts": "2026-11-07T17:00:00Z",
+    "attrs": {
+      "summary": [],
+      "findings": [
+        {
+          "source": "acme",
+          "title": "Search index stops itself every night",
+          "urgent": true
+        }
+      ],
+      "sensors": {
+        "jobs": [
+          {
+            "profile": "watch",
+            "name": "kb-health",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "watch",
+            "name": "run-watch",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "watch",
+            "name": "sandbox-heal",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "watch",
+            "name": "secrets-check",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "watch",
+            "name": "board-steward",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "watch",
+            "name": "wiki-writer",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "failed",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 2,
+            "last_error": "blocked_config: WIKI_TOKEN missing"
+          },
+          {
+            "profile": "watch",
+            "name": "review-queue-auto",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "watch",
+            "name": "weekly-digest",
+            "enabled": true,
+            "last_run_at": "2026-11-02T13:00:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "watch",
+            "name": "northwind-inbox",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:30:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "build",
+            "name": "workshop-dispatch",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:56:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "build",
+            "name": "merge-gate",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:56:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          },
+          {
+            "profile": "build",
+            "name": "merge-gate",
+            "enabled": true,
+            "last_run_at": "2026-11-07T17:56:00Z",
+            "last_status": "ok",
+            "next_run_at": "2026-11-07T19:00:00Z",
+            "failure_streak": 0,
+            "last_error": null
+          }
+        ],
+        "workshop": [
+          {
+            "card": "t_1480679e",
+            "lane": "build",
+            "repo": "acme/ops",
+            "plan_title": "Add the status page",
+            "pr_number": 266,
+            "pr_url": "https://github.com/acme/ops/pull/266",
+            "state": "running",
+            "outcome": null,
+            "started_at": "2026-11-07T16:55:00Z",
+            "ended_at": null
+          },
+          {
+            "card": "t_56182800",
+            "lane": "build",
+            "repo": "acme/ops",
+            "plan_title": "Alert when the login is dead",
+            "pr_number": 264,
+            "pr_url": "https://github.com/acme/ops/pull/264",
+            "state": "finished",
+            "outcome": "pr_opened",
+            "started_at": "2026-11-06T18:07:00Z",
+            "ended_at": "2026-11-06T18:40:00Z"
+          },
+          {
+            "card": "t_f69c71f4",
+            "lane": "build",
+            "repo": "acme/northwind-engine",
+            "plan_title": null,
+            "pr_number": null,
+            "pr_url": null,
+            "state": "finished",
+            "outcome": "failed",
+            "started_at": "2026-11-06T14:58:00Z",
+            "ended_at": "2026-11-06T15:20:00Z"
+          }
+        ],
+        "slack": {
+          "ok": true,
+          "at": "2026-11-07T17:50:00Z"
+        },
+        "security": {
+          "sentry": {
+            "count": 1,
+            "verdicts": {
+              "pass": 1
+            }
+          },
+          "tool_results": {
+            "count": 452,
+            "pass": 409,
+            "suspicious": 24,
+            "fail": 19
+          },
+          "tool_blocks": {
+            "count": 720,
+            "top_rules": [
+              {
+                "rule": "Open a password or credential file",
+                "count": 201
+              },
+              {
+                "rule": "Read an .env settings file",
+                "count": 71
+              }
+            ]
+          }
+        },
+        "selfheal": {
+          "fixed": 3,
+          "carded": 1
+        },
+        "needs_you": 1,
+        "client_inboxes": {
+          "northwind": {
+            "open": 4,
+            "carded": 3,
+            "backlog": 1,
+            "groups": [
+              {
+                "tag": "geofence_bad_pin",
+                "count": 2
+              }
+            ],
+            "newest_at": "2026-11-07T15:00:00+00:00"
+          }
+        }
+      }
+    }
+  },
+  "tagging": [
+    {
+      "source": "drive",
+      "total": 234,
+      "by_tag_source": {
+        "content": 40,
+        "container": 150,
+        "source_default": 0,
+        "default": 44,
+        "not_recorded": 0
+      },
+      "untagged": 44,
+      "unknown_tag": 2
+    },
+    {
+      "source": "fireflies",
+      "total": 197,
+      "by_tag_source": {
+        "content": 120,
+        "container": 30,
+        "source_default": 25,
+        "default": 22,
+        "not_recorded": 0
+      },
+      "untagged": 22,
+      "unknown_tag": 0
+    },
+    {
+      "source": "gmail",
+      "total": 3,
+      "by_tag_source": {
+        "content": 3,
+        "container": 0,
+        "source_default": 0,
+        "default": 0,
+        "not_recorded": 0
+      },
+      "untagged": 0,
+      "unknown_tag": 0
+    },
+    {
+      "source": "wiki",
+      "total": 480,
+      "by_tag_source": {
+        "content": 468,
+        "container": 0,
+        "source_default": 0,
+        "default": 12,
+        "not_recorded": 0
+      },
+      "untagged": 12,
+      "unknown_tag": 1
+    }
+  ],
+  "issues": {
+    "open": [
+      {
+        "category": "source_failure",
+        "source": "wiki",
+        "title": "Wiki run failed",
+        "status": "open",
+        "opened_at": "2026-10-25T11:00:00Z",
+        "occurrences": 14,
+        "has_card": true
+      },
+      {
+        "category": "friction_point",
+        "source": null,
+        "title": "Search misses the pricing notes",
+        "status": "open",
+        "opened_at": "2026-11-05T16:00:00Z",
+        "occurrences": 1,
+        "has_card": false
+      }
+    ],
+    "fixed_last_30_days": 4,
+    "care_plan_enabled": false
+  },
+  "setup": {
+    "setup_state": "complete",
+    "level": "people",
+    "host": "engine.example.com",
+    "locked_until": null
+  },
+  "config": {
+    "applied_at": "2026-11-06T15:00:00Z",
+    "rejected": false
+  },
+  "recent": []
+}

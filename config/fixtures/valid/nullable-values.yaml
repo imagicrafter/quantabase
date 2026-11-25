@@ -1,0 +1,14 @@
+# The values that may be written as null: a repo, a default topic, a mail prefix.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+domains:
+  - { id: consulting, label: Consulting }
+  - { id: private, label: Private, sensitive: true }
+sources:
+  wiki: { enabled: false, repo: null, default_domain: null }
+  drive: { enabled: true, default_domain: null }
+  gmail: { enabled: false, prefix: null }

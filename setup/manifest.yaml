@@ -1,0 +1,595 @@
+# Setup manifest -- the phases of building an Engine, and how each is verified.
+#
+# `python -m kbe verify` runs the `verify` checks below. A phase is done when
+# every one of its checks passes; a check that cannot be run is reported as
+# skipped, and a skipped check is not a passing check.
+#
+# Each phase has:
+#   actor      agent | human | either -- who does the work
+#   command    what performs the phase (where one command does)
+#   verify     the checks. Format, in full: scripts/kbe/manifest.py
+#                kind: sql     SQL, run in a transaction that is rolled back
+#                kind: shell   a command, run from the repo root
+#                kind: manual  not automated yet; always reported as skipped
+#                expect:       equals | contains | not_contains | exit_code |
+#                              error_contains (the run must fail with this text)
+#                env:          values a shell check needs from the local env
+#                              file (given to that one command, never printed)
+#              {state.<name>} is filled from .kb-engine-local/state.json,
+#              {python} is the Python running kbe.
+#              SQL checks are written for the default schema, `workspace`.
+#              For a deployment that set KB_SCHEMA they are renamed the same
+#              way migrations are, and shell checks get KB_SCHEMA in their
+#              environment.
+#   status     `planned` marks a phase whose commands are not built yet. It
+#              has no checks and is not run. No phase is planned today.
+#
+# The phases are listed in the order a new setup reaches them. The guided
+# walk is .claude/skills/kb-engine-setup/SKILL.md; the long form is
+# docs/build-manual.md, one chapter per phase.
+
+schema_version: 2
+
+phases:
+  - id: prereqs
+    title: Prerequisites
+    chapter: 1
+    depends_on: []
+    actor: either
+    command: "python -m kbe doctor"
+    verify:
+      - id: tools
+        description: The tools a setup needs are installed and logged in
+        kind: shell
+        run: "{python} -m kbe doctor"
+        expect: { exit_code: 0 }
+
+  - id: bronze
+    title: Bronze - raw captures
+    chapter: 2
+    depends_on: [prereqs]
+    actor: agent
+    command: "python -m kbe db migrate"
+    verify:
+      - id: raw-captures-source-constraint
+        description: raw_captures source CHECK constraint is applied
+        kind: sql
+        run: >-
+          select count(*) from pg_constraint
+          where conrelid = 'workspace.raw_captures'::regclass
+          and conname = 'raw_captures_source_values';
+        expect: { equals: "1" }
+      - id: migrations-current
+        description: Every migration file in the repository is applied
+        kind: shell
+        run: "{python} -m kbe db migrate --dry-run"
+        expect: { exit_code: 0, contains: "Nothing to apply" }
+
+  - id: silver
+    title: Silver - documents
+    chapter: 3
+    depends_on: [bronze]
+    actor: agent
+    verify:
+      - id: domains-non-empty
+        description: A document with an empty domains array is rejected
+        kind: sql
+        run: >-
+          insert into workspace.documents
+            (source, external_id, source_hash, title, body, domains)
+          values ('wiki', 'kbe-verify-empty-domains', 'x', 'x', 'x', array[]::text[]);
+        expect: { error_contains: "documents_domains_non_empty" }
+
+  - id: gold
+    title: Gold - approval and the curated vault
+    chapter: 4
+    depends_on: [silver]
+    actor: either
+    verify:
+      - id: approved-ranks-higher
+        description: An approved row ranks above an otherwise-identical unreviewed row
+        kind: sql
+        run: |
+          insert into workspace.domains (domain, label)
+            values ('kbe-verify-probe', 'Verify probe');
+          insert into workspace.principals (handle, display_name, role, token_hash)
+            values ('kbe-verify-reader', 'Verify probe', 'reader', 'kbe-verify-reader-hash');
+          insert into workspace.access_grants (principal_id, domain, granted_by)
+            select id, 'kbe-verify-probe', 'kbe verify'
+            from workspace.principals where handle = 'kbe-verify-reader';
+          insert into workspace.documents
+            (source, external_id, source_hash, title, body, distillation, domains,
+             review_status, embedding)
+          select 'wiki', 'kbe-verify-' || status, 'x', 'kbeverifyprobe',
+                 'kbeverifyprobe marker text', 'kbeverifyprobe marker text',
+                 array['kbe-verify-probe'], status,
+                 (select ('[' || string_agg('0.05', ',') || ']')::vector(384)
+                  from generate_series(1, 384))
+          from unnest(array['approved', 'unreviewed']) as status;
+          do $$ begin perform workspace.refresh_documents_term_stats(); end $$;
+          select coalesce(
+              max(fused_score) filter (where review_status = 'approved')
+            > max(fused_score) filter (where review_status = 'unreviewed'), false)
+          from workspace.documents_search(
+            'kbeverifyprobe',
+            (select ('[' || string_agg('0.05', ',') || ']')::vector(384)
+             from generate_series(1, 384)),
+            'kbe-verify-reader-hash');
+        expect: { equals: "t" }
+
+  - id: retrieval
+    title: Retrieval
+    chapter: 5
+    depends_on: [gold]
+    actor: agent
+    verify:
+      - id: unknown-token-zero-rows
+        description: An unresolvable token hash returns zero rows, not an error
+        kind: sql
+        run: >-
+          select count(*) from workspace.documents_search(
+            'anything',
+            (select ('[' || string_agg('0', ',') || ']')::vector(384)
+             from generate_series(1, 384)),
+            'obviously-invalid-hash-not-a-real-token');
+        expect: { equals: "0" }
+
+  - id: access_control
+    title: Access control
+    chapter: 6
+    depends_on: [silver]
+    actor: agent
+    verify:
+      - id: engine-role-no-table-grants
+        description: kb_engine holds zero table grants
+        kind: sql
+        run: >-
+          select count(*) from information_schema.role_table_grants
+          where grantee = 'kb_engine';
+        expect: { equals: "0" }
+      - id: sensitive-never-implicit
+        description: Sensitive topics never appear in an implicit administrator grant
+        kind: sql
+        run: |
+          insert into workspace.domains (domain, label, sensitive)
+            values ('kbe-verify-locked', 'Verify probe', true);
+          insert into workspace.principals (handle, display_name, role, token_hash)
+            values ('kbe-verify-admin', 'Verify probe', 'administrator', 'kbe-verify-admin-hash');
+          select count(*) from workspace.domains d
+          where d.sensitive
+            and d.domain = any (workspace.resolve_domains('kbe-verify-admin-hash'));
+        expect: { equals: "0" }
+
+      # Seed-free: the check makes its own topic, people, grant and document
+      # and everything is rolled back. No token is minted and the Engine needs
+      # no document of its own. It proves the token path denies: a person
+      # with a valid token and no grant gets nothing, an administrator gets
+      # no sensitive topic without a grant by name, and an unknown or null
+      # token resolves to nothing -- next to a positive control (the granted
+      # person does find the document), without which a denial proves nothing.
+      - id: token-path-suite
+        description: The token path shows a sensitive document to its grantee and to nobody else
+        kind: sql
+        run: |
+          insert into workspace.domains (domain, label, sensitive)
+            values ('kbe-verify-private', 'Verify probe', true);
+          insert into workspace.principals (handle, display_name, role, token_hash) values
+            ('kbe-verify-granted', 'Verify probe', 'reader', 'kbe-verify-granted-hash'),
+            ('kbe-verify-ungranted', 'Verify probe', 'reader', 'kbe-verify-ungranted-hash'),
+            ('kbe-verify-manager', 'Verify probe', 'administrator', 'kbe-verify-manager-hash');
+          insert into workspace.access_grants (principal_id, domain, granted_by)
+            select id, 'kbe-verify-private', 'kbe verify'
+            from workspace.principals where handle = 'kbe-verify-granted';
+          insert into workspace.documents
+            (source, external_id, source_hash, title, body, distillation, domains,
+             review_status, embedding)
+          values ('wiki', 'kbe-verify-private-doc', 'x', 'kbeverifyprivate',
+                  'kbeverifyprivate marker text', 'kbeverifyprivate marker text',
+                  array['kbe-verify-private'], 'approved',
+                  (select ('[' || string_agg('0.05', ',') || ']')::vector(384)
+                   from generate_series(1, 384)));
+          do $$ begin perform workspace.refresh_documents_term_stats(); end $$;
+          with probe as (
+            select (select ('[' || string_agg('0.05', ',') || ']')::vector(384)
+                    from generate_series(1, 384)) as embedding
+          )
+          select concat_ws(' ',
+            'granted=' || (select count(*) from workspace.documents_search(
+                'kbeverifyprivate', probe.embedding, 'kbe-verify-granted-hash')
+                where title = 'kbeverifyprivate'),
+            'ungranted=' || (select count(*) from workspace.documents_search(
+                'kbeverifyprivate', probe.embedding, 'kbe-verify-ungranted-hash')),
+            'administrator=' || (select count(*) from workspace.documents_search(
+                'kbeverifyprivate', probe.embedding, 'kbe-verify-manager-hash')
+                where title = 'kbeverifyprivate'),
+            'unknown=' || (select count(*) from workspace.documents_search(
+                'kbeverifyprivate', probe.embedding, 'kbe-verify-no-such-hash')),
+            'null=' || (select count(*) from workspace.documents_search(
+                'kbeverifyprivate', probe.embedding, null)),
+            'ungranted_topics=' || coalesce(array_length(
+                workspace.resolve_domains('kbe-verify-ungranted-hash'), 1), 0),
+            'null_topics=' || coalesce(array_length(workspace.resolve_domains(null), 1), 0))
+          from probe;
+        expect:
+          equals: "granted=1 ungranted=0 administrator=0 unknown=0 null=0 ungranted_topics=0 null_topics=0"
+
+  - id: curation_loop
+    title: The curation loop
+    chapter: 7
+    depends_on: [gold]
+    actor: agent
+    verify:
+      # What makes applying a batch twice harmless: an item is applied only
+      # while applied_at is empty, and a document appears once per batch.
+      - id: review-one-item-per-document
+        description: A review batch can hold a document only once
+        kind: sql
+        run: >-
+          select count(*) from pg_constraint
+          where conrelid = 'workspace.review_items'::regclass
+          and conname = 'review_items_one_per_doc';
+        expect: { equals: "1" }
+      - id: review-applied-has-decision
+        description: No review item is marked applied without a decision
+        kind: sql
+        run: >-
+          select count(*) from workspace.review_items
+          where applied_at is not null and decision is null;
+        expect: { equals: "0" }
+
+  - id: knowledge_repo
+    title: Knowledge repo - the private repo that holds the wiki and the config
+    chapter: 8
+    depends_on: [prereqs]
+    actor: either
+    command: "python -m kbe repo init --create <owner/name> --engine-id <id> --engine-name <name> --owner-email <email>"
+    verify:
+      - id: knowledge-repo-ready
+        description: The local clone is present, clean, in sync and holds a valid config
+        kind: shell
+        run: "{python} -m kbe repo status"
+        expect: { exit_code: 0 }
+
+  - id: config
+    title: Engine config - owner, topics and sources
+    chapter: 9
+    depends_on: [bronze, knowledge_repo]
+    actor: either
+    command: "python -m kbe config apply <knowledge repo>/.kb-engine/engine.yaml"
+    verify:
+      - id: config-applied
+        description: The database holds an applied Engine config
+        kind: sql
+        run: >-
+          select count(*) from workspace.engine_settings
+          where config is not null and config_hash is not null;
+        expect: { equals: "1" }
+      - id: owner-is-administrator
+        description: The owner named in the config is an active administrator
+        kind: sql
+        run: >-
+          select count(*) from workspace.principals
+          where lower(email) = lower({state.owner_email})
+            and role = 'administrator' and active;
+        expect: { equals: "1" }
+      - id: unclassified-owner-only
+        description: Nobody but the owner is granted the unclassified topic
+        kind: sql
+        run: >-
+          select count(*) from workspace.access_grants g
+          join workspace.principals p on p.id = g.principal_id
+          where g.domain = 'unclassified'
+            and lower(p.email) is distinct from lower({state.owner_email});
+        expect: { equals: "0" }
+      - id: config-matches-repo
+        description: The config in the knowledge repo is the one the database has applied
+        kind: shell
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        run: "{python} -m kbe config apply {state.knowledge_repo_path}/.kb-engine/engine.yaml --dry-run"
+        expect: { exit_code: 0, contains: "No changes" }
+
+  - id: distill_embed
+    title: Distillation and embedding
+    chapter: 10
+    depends_on: [config]
+    actor: agent
+    command: "python -m kbe db deploy-functions"
+    verify:
+      # A machine that also embeds locally (sentence-transformers installed)
+      # should run `python -m knowledge.verify_embedding_alignment` as well;
+      # a deployment that only ever uses the embed function has one vector
+      # space and nothing to compare.
+      - id: embed-function-answers
+        description: The embed function returns a 384-number vector for the stored embed token
+        kind: shell
+        run: >-
+          cd scripts && {python} -c "import sys;
+          from knowledge.embedder import embed_query;
+          sys.exit(0 if len(embed_query('kbe verify probe', backend='remote')) == 384 else 1)"
+        env: [KNOWLEDGE_EMBED_URL, KNOWLEDGE_EMBED_TOKEN]
+        expect: { exit_code: 0 }
+
+  - id: deployment
+    title: Deployment
+    chapter: 11
+    depends_on: [config]
+    actor: either
+    command: "python -m kbe deploy render --host <engine.example.com> --server-mode && python -m kbe deploy apply"
+    verify:
+      - id: app-spec-valid
+        description: The app spec written by `kbe deploy render` validates
+        kind: shell
+        # The file argument is positional; `validate --spec <file>` is not accepted.
+        run: "doctl apps spec validate --schema-only .kb-engine-local/do-app-spec.yaml"
+        expect: { exit_code: 0 }
+      - id: no-secret-values-in-spec
+        description: "No SECRET env var carries a value in the rendered spec"
+        kind: shell
+        run: "grep -A2 'type: SECRET' .kb-engine-local/do-app-spec.yaml | grep -v '^\\s*#' | grep -c 'value:'"
+        expect: { equals: "0" }
+
+  - id: mcp_engine
+    title: The MCP engine
+    chapter: 12
+    depends_on: [access_control, deployment]
+    actor: agent
+    command: "python -m kbe deploy status"
+    verify:
+      # The app's own address, not the Engine's hostname: the hostname sits
+      # behind Cloudflare Access, which answers /health with a sign-in page.
+      # `kbe deploy apply` and `kbe deploy status` record the address.
+      - id: health
+        description: The engine process is up (asked on the app's own address)
+        kind: shell
+        run: >-
+          curl -fsS https://{state.do_default_hostname}/health |
+          {python} -c "import json, sys; sys.exit(0 if json.load(sys.stdin).get('ok') is True else 1)"
+        expect: { exit_code: 0 }
+      - id: schema-served-by-api
+        description: The REST API serves the Engine's schema (a config read as the ingest role works)
+        kind: shell
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        run: "{python} -m kbe db expose-schema --check"
+        expect: { exit_code: 0, contains: "is served by the REST API" }
+
+  - id: access_setup
+    title: Access setup - who can reach the Engine
+    chapter: 13
+    depends_on: [mcp_engine]
+    actor: human
+    # `kbe access setup` makes the setup code, sets it on the app, has the
+    # app make the Cloudflare side, and takes the code off again. A person
+    # makes the one Cloudflare token and copies it. The service must be up
+    # (mcp_engine). The fallback is `kbe access init --clipboard` and the
+    # page at https://<the app's own address>/setup.
+    command: "python -m kbe access setup"
+    verify:
+      - id: setup-complete
+        description: Setup is complete and both sign-in applications are stored
+        kind: shell
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        run: >-
+          {python} -m kbe access status --json |
+          {python} -c "import json, sys;
+          s = json.load(sys.stdin); a = s.get('access') or {};
+          missing = [k for k in ('team_domain', 'aud', 'status_aud', 'host') if not a.get(k)];
+          print('setup: ' + str(s.get('setup_state')) + '; missing: ' + (', '.join(missing) or 'nothing'));
+          sys.exit(0 if s.get('setup_state') == 'complete' and not missing else 1)"
+        expect: { exit_code: 0 }
+      - id: hostname-asks-for-sign-in
+        description: The Engine's hostname does not answer /mcp without a sign-in
+        kind: shell
+        # Right after the Cloudflare records are made the edge answers 404 for
+        # a short while (seen live: under two minutes). A 404 is asked again,
+        # every 10 seconds for up to three minutes; any other answer is final.
+        run: >-
+          code=404; tries=0;
+          while [ "$code" = "404" ] && [ "$tries" -lt 18 ]; do
+          [ "$tries" -gt 0 ] && sleep "${KBE_PROBE_WAIT_SECONDS:-10}";
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://{state.engine_host}/mcp);
+          tries=$((tries + 1));
+          done;
+          printf '%s' "$code" |
+          {python} -c "import sys;
+          code = sys.stdin.read().strip(); print('HTTP ' + code);
+          sys.exit(0 if code in ('301', '302', '401', '403') else 1)"
+        expect: { exit_code: 0 }
+      - id: app-address-refuses-the-connector
+        description: The app's own address does not serve /mcp
+        kind: shell
+        run: >-
+          curl -s -o /dev/null -w '%{http_code}' https://{state.do_default_hostname}/mcp |
+          {python} -c "import sys;
+          code = sys.stdin.read().strip(); print('HTTP ' + code);
+          sys.exit(0 if code[:1] in ('3', '4') else 1)"
+        expect: { exit_code: 0 }
+
+  - id: sources
+    title: Sources - each enabled source has a working credential
+    chapter: 14
+    depends_on: [config]
+    actor: either
+    # Drive needs a person: `python -m kbe sources drive auth --client-secret FILE --out FILE`
+    # opens a browser sign-in. Gmail is optional; its check is below and
+    # runs only when the config turns the mail source on.
+    command: "python -m kbe sources <wiki|fireflies|drive|gmail> check"
+    verify:
+      - id: source-credentials
+        description: The credential of every enabled source (wiki, Drive, Fireflies, Gmail) makes one read
+        kind: shell
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        run: >-
+          for source in $({python} -m kbe sources list --json |
+          {python} -c "import json, sys;
+          print(' '.join(s['source'] for s in json.load(sys.stdin)
+          if s['enabled'] and s['source'] in ('wiki', 'drive', 'fireflies', 'gmail')))");
+          do {python} -m kbe sources $source check || exit 1; done
+        expect: { exit_code: 0, contains: "ok" }
+
+  - id: ingestion
+    title: Ingestion - connectors
+    chapter: 15
+    depends_on: [sources, access_setup, distill_embed]
+    actor: agent
+    # The scheduled jobs do the work (one `puller-<source>` job per enabled
+    # source). To run one from this machine: python -m pullers.runner --source wiki
+    command: "python -m kbe sources list"
+    verify:
+      # Reads the local clone named by KNOWLEDGE_WIKI_ROOT in the local env
+      # file. Drive is left out: it needs a network call and its own token,
+      # which `kbe sources drive check` covers in the sources phase.
+      - id: connector-contract
+        description: The wiki connector passes the contract test on the local clone
+        kind: shell
+        run: "cd scripts && {python} -m knowledge.connector_contract_test"
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        expect: { exit_code: 0, contains: "All connectors pass" }
+      - id: audit-only-writes-nothing
+        description: An audit-only backfill writes nothing
+        kind: shell
+        run: "cd scripts && {python} -m knowledge.backfill_wiki --audit-only"
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        expect: { exit_code: 0 }
+      - id: enabled-sources-ran
+        description: Every enabled source has run, and its last run succeeded
+        kind: shell
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        run: >-
+          {python} -m kbe sources list --json |
+          {python} -c "import json, sys;
+          on = [s for s in json.load(sys.stdin) if s['enabled']];
+          bad = [s['source'] for s in on if s['state'] != 'ok'];
+          print('not ok: ' + ', '.join(bad) if bad else 'ok');
+          sys.exit(1 if bad or not on else 0)"
+        expect: { exit_code: 0 }
+
+  - id: authentication
+    title: Authentication
+    chapter: 16
+    depends_on: [access_setup]
+    actor: human
+    # A person adds the custom connector https://<host>/mcp in Claude and
+    # signs in with the emailed one-time PIN.
+    verify:
+      - id: client-registration
+        description: Dynamic client registration succeeds for Claude's redirect address
+        kind: shell
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        run: >-
+          team=$({python} -m kbe access status --json |
+          {python} -c "import json, sys; print((json.load(sys.stdin).get('access') or {}).get('team_domain') or '')")
+          && test -n "$team"
+          && curl -fsS -X POST "$team/cdn-cgi/access/oauth/registration"
+          -H "Content-Type: application/json"
+          -d '{"redirect_uris":["https://claude.ai/api/mcp/auth_callback"],"client_name":"kbe verify probe"}'
+        expect: { exit_code: 0, contains: "client_id" }
+      - id: first-login-pins-identity
+        description: First login pins the OAuth identity (trust on first use)
+        kind: sql
+        run: >-
+          select count(*) from workspace.principals
+          where lower(email) = lower({state.owner_email}) and oauth_subject is not null;
+        expect: { equals: "1" }
+
+  - id: tagging
+    title: Tagging - topics set at the source
+    chapter: 17
+    depends_on: [ingestion]
+    actor: either
+    # Guided by .claude/skills/kb-engine-tagging/SKILL.md. Nothing is written
+    # to a source without `apply --write` and the owner's yes.
+    command: "python -m kbe tags audit"
+    verify:
+      - id: tag-audit-runs
+        description: The tag audit reads every source's documents
+        kind: shell
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        run: "{python} -m kbe tags audit --json"
+        expect: { exit_code: 0 }
+      - id: every-document-has-a-tag-source
+        description: Every live document records how its topics were decided
+        kind: sql
+        run: >-
+          select count(*) from workspace.documents
+          where tag_source is null and deleted_at is null;
+        expect: { equals: "0" }
+      - id: unclassified-is-locked
+        description: The unclassified topic exists and is sensitive
+        kind: sql
+        run: >-
+          select count(*) from workspace.domains
+          where domain = 'unclassified' and sensitive;
+        expect: { equals: "1" }
+
+  - id: verification
+    title: Verification
+    chapter: 18
+    depends_on: [authentication, ingestion, tagging, curation_loop]
+    actor: agent
+    verify:
+      - id: fail-closed-suite
+        description: The fail-closed acceptance suite passes with none skipped
+        kind: shell
+        run: "cd engine && REAL_DB=1 npx vitest run tests/access/fail-closed.test.ts"
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        expect: { exit_code: 0, not_contains: "skipped" }
+      # The token path itself is proved by access_control.token-path-suite,
+      # which needs no token and no document. This check asks the live REST
+      # API as the two roles that must be refused: the anonymous role may run
+      # no read function, and the service's role may read no table. It needs
+      # no token and no service-role key.
+      - id: role-boundary-suite
+        description: The REST API refuses the anonymous role and gives the service's role no table
+        kind: shell
+        run: "cd scripts && {python} -m knowledge.access_test --roles-only"
+        env: [SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET]
+        expect: { exit_code: 0 }
+
+human_gates:
+  - phase: prereqs
+    what_the_human_must_do: >-
+      Create the accounts (Supabase, DigitalOcean, Cloudflare with a domain,
+      GitHub, and one per source), log in to `gh` and `doctl`, and fill in the
+      local env file. The agent never opens that file.
+    value_to_bring_back: >-
+      "Done". No value is read back; `kbe doctor` and the first commands show
+      whether it worked.
+  - phase: deployment
+    what_the_human_must_do: >-
+      Enter the real value of each type: SECRET env var in the DigitalOcean
+      dashboard (`kbe deploy apply` lists them by name): the service's, and
+      on each job the database, embed and model values. A source's own
+      credential may wait for the sources phase. Confirm the billing
+      estimate before the first real deploy completes.
+    value_to_bring_back: >-
+      Confirmation that those secrets are set and that the estimate is one
+      service on the smallest instance size plus the scheduled jobs.
+  - phase: access_setup
+    what_the_human_must_do: >-
+      Say who may sign in, then say yes to `python -m kbe access setup`
+      (an assistant may run it: it shows neither the setup code nor the
+      token). Open the link it prints, create the one-time Cloudflare API
+      token there and copy it. The command reads it from the clipboard and
+      does the rest. Delete the token in Cloudflare afterwards. The fallback
+      is the page at https://<the app's own address>/setup, with a code from
+      `python -m kbe access init --clipboard`.
+    value_to_bring_back: >-
+      "Setup finished". The setup code and the Cloudflare token are never
+      given to the agent; `kbe access status` shows the result.
+  - phase: sources
+    what_the_human_must_do: >-
+      Make the source credentials (a fine-grained GitHub token for the
+      knowledge repo, the Fireflies API key, the Google sign-in through
+      `kbe sources drive auth`, and `kbe sources gmail auth` when the
+      optional mail source is on), put them in the local env file and in
+      the DigitalOcean dashboard.
+    value_to_bring_back: >-
+      "Done". `kbe sources <name> check` shows whether each one works.
+  - phase: authentication
+    what_the_human_must_do: >-
+      Add a custom connector in Claude with the address https://<host>/mcp
+      and complete the sign-in, which needs the one-time PIN Cloudflare
+      emails to the owner.
+    value_to_bring_back: >-
+      Confirmation that the connector shows as connected and a search
+      returns results.

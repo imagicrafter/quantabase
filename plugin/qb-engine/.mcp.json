@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "quantabase": {
+      "type": "http",
+      "url": "${user_config.engine_url}"
+    }
+  }
+}

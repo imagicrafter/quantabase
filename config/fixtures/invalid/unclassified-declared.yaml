@@ -1,0 +1,9 @@
+# `unclassified` always exists and may not be declared.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+domains:
+  - { id: unclassified, label: Unclassified }

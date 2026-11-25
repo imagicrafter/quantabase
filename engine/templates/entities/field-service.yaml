@@ -1,0 +1,44 @@
+# Route and job businesses. Jobs, visits and equipment are sections of the
+# Site page, not drawers.
+name: field-service
+label: Field service
+description: Route and job businesses. Adds Sites and Vendors.
+drawers:
+  - id: sites
+    label: Sites
+    icon: pin
+    key_rule:
+      kind: slug
+      text: "site: followed by the street address in lower case with dashes, e.g. site:12-main-st-springfield."
+    fields:
+      - { name: organisation, kind: key }
+      - { name: service, kind: text }
+      - { name: frequency, kind: text }
+      - { name: last_visit, kind: date }
+      - { name: next_visit, kind: date }
+    sections: [Summary, Access and contacts, Equipment, Visits, Issues, Notes]
+    signals:
+      - A street address that gets work done at it
+    update_rules:
+      auto: [organisation, service, frequency, last_visit, next_visit]
+      needs_yes: []
+    list_views:
+      - { name: due, sort: next_visit, desc: false }
+
+  - id: vendors
+    label: Vendors
+    icon: truck
+    key_rule:
+      kind: domain
+      text: The vendor's web domain, lower case, without www.
+    fields:
+      - { name: supplies, kind: text }
+      - { name: last_order, kind: date }
+    sections: [Summary, Contacts, Terms, Orders, Notes]
+    signals:
+      - Invoices, quotes or orders from a supplier
+    update_rules:
+      auto: [supplies, last_order]
+      needs_yes: []
+    list_views:
+      - { name: recent, sort: last_order, desc: true }

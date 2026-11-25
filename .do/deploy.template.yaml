@@ -1,0 +1,72 @@
+# The "Deploy to DigitalOcean" button reads this file (README, "Deploy").
+#
+# ONE service, nothing else: the button cannot create jobs or workers, and the
+# Engine does not need them. The curator, the nightly GitHub backup and the
+# other chores run inside the service, poked by Supabase cron
+# (/internal/curator/tick). The Python pullers are "server mode" and are not
+# part of this deploy (docs/operations.md, "Server mode").
+#
+# It builds the Dockerfile at the repository root, so the running app carries
+# supabase/migrations and the embed function for the Database setup screen.
+#
+# The button asks for the three values below and nothing more. There is no
+# SETUP_CODE: on first boot the app writes a one-time code to its own run log
+# (Runtime Logs in the DigitalOcean dashboard); open the app's address with
+# that code to claim it.
+#
+# UPDATES: a new release on the branch below does NOT redeploy the app on its
+# own. Open the app in the DigitalOcean dashboard and choose
+# Actions -> Force Rebuild and Deploy (docs/operations.md, "Updating").
+#
+# COST: one apps-s-1vcpu-0.5gb service. Check the estimate the button shows.
+spec:
+  name: kb-engine
+  region: nyc
+  alerts:
+    - rule: DEPLOYMENT_FAILED
+  services:
+    - name: kb-engine
+      git:
+        repo_clone_url: https://github.com/imagicrafter/quantabase.git
+        branch: stable
+      dockerfile_path: Dockerfile
+      source_dir: /
+      http_port: 8080
+      instance_count: 1
+      instance_size_slug: apps-s-1vcpu-0.5gb
+      health_check:
+        http_path: /health
+        initial_delay_seconds: 10
+        period_seconds: 10
+        failure_threshold: 3
+      envs:
+        # Supabase dashboard -> Project Settings -> API -> Project URL
+        - key: SUPABASE_URL
+          scope: RUN_TIME
+        # Supabase dashboard -> Project Settings -> API -> anon (public) key
+        - key: SUPABASE_ANON_KEY
+          scope: RUN_TIME
+          type: SECRET
+        # Supabase dashboard -> Project Settings -> API -> JWT secret (legacy)
+        - key: SUPABASE_JWT_SECRET
+          scope: RUN_TIME
+          type: SECRET
+        - key: PORT
+          scope: RUN_TIME
+          value: "8080"
+        - key: NODE_ENV
+          scope: RUN_TIME
+          value: production
+        - key: LOG_LEVEL
+          scope: RUN_TIME
+          value: info
+        - key: NODE_OPTIONS
+          scope: RUN_TIME
+          value: --max-old-space-size=384
+        - key: SOURCE_COMMIT
+          scope: RUN_TIME
+          value: ${_self.commit_hash}
+        # Lets the Updates screen link straight to this app in the dashboard.
+        - key: APP_ID
+          scope: RUN_TIME
+          value: ${APP_ID}

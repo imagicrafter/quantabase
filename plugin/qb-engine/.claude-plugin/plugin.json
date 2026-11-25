@@ -1,0 +1,30 @@
+{
+  "name": "qb-engine",
+  "displayName": "Quantabase",
+  "version": "0.4.0",
+  "description": "Quantabase: feed your own knowledge Engine from Claude: a mechanical ingest skill that copies new Gmail messages, Drive files, Fireflies meetings and Calendar events into your Engine unchanged (your Engine keeps only what your own inclusion rules include), a setup skill that schedules one ingest task per source on the smallest model, and a skill that sends your Engine a short note of what a Claude Code session found (labelled items with exact quotes and page hints), by hand after a preview. Curation happens on the Engine, not in Claude.",
+  "author": {
+    "name": "imagicrafter.ai",
+    "url": "https://imagicrafter.ai"
+  },
+  "homepage": "https://github.com/imagicrafter/quantabase",
+  "repository": "https://github.com/imagicrafter/quantabase",
+  "license": "MIT",
+  "keywords": [
+    "knowledge",
+    "mcp",
+    "ingest",
+    "gmail",
+    "drive",
+    "fireflies",
+    "claude-code"
+  ],
+  "userConfig": {
+    "engine_url": {
+      "type": "string",
+      "title": "Your Quantabase address (ends in /mcp)",
+      "description": "Paste the connector address from your Engine's sign-in setup page or its Health screen. Example: https://kb.example.com/mcp. Replace the whole box, including any ${...} text already in it.",
+      "required": true
+    }
+  }
+}

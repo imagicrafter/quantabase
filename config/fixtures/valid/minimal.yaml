@@ -1,0 +1,7 @@
+# The smallest config: a version and an engine. Everything else has a default.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com

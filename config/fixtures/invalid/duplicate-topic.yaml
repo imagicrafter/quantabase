@@ -1,0 +1,10 @@
+# A topic id may appear once.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+domains:
+  - { id: consulting, label: A }
+  - { id: consulting, label: B }

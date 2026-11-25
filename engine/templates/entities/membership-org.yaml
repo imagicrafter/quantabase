@@ -1,0 +1,57 @@
+# Economic development and member groups. Grants and report dates are
+# sections of the Program page, not drawers.
+name: membership-org
+label: Membership organisation
+description: Economic development and member groups. Adds Deals (prospects) and Programs.
+drawers:
+  - id: deals
+    label: Deals
+    icon: dollar
+    key_rule:
+      kind: slug
+      text: "deal: followed by the prospect's domain and a short name."
+      anchor: { field: organisation, single_open: { field: stage, closed: [won, lost] } }
+    fields:
+      - { name: organisation, kind: key }
+      - { name: stage, kind: enum, values: [lead, engaged, site_visit, proposal, won, lost] }
+      - { name: value, kind: number }
+      - { name: next_step, kind: text }
+      - { name: next_date, kind: date }
+      - { name: last_contact, kind: date }
+    sections: [Summary, Need, Incentives, Timeline, Notes]
+    signals:
+      - A prospect looking at a location, expansion or membership
+      - The item names money (a budget, price, fee or value) or asks for a price, a proposal, a quote or a scope of work
+    update_rules:
+      auto: [organisation, stage, value, next_step, next_date, last_contact]
+      needs_yes: []
+    curator:
+      links_to: [organisations, people, projects]
+      required_when:
+        - '\$\s?\d'
+        - '\b\d[\d,.]*\s?(k|usd|dollars|eur|euros|gbp|pounds)\b'
+        - '\b(budget|price|pricing|fee|fees|quote|quotation|proposal|sow|scope of work)\b'
+      notes:
+        - Set "value" and "stage" on a new deal page when the item states them
+        - A project page does not replace the deal page; make both when both apply
+    list_views:
+      - { name: pipeline, filter: stage, sort: next_date, desc: false }
+
+  - id: programs
+    label: Programs
+    icon: collection
+    key_rule:
+      kind: slug
+      text: "program: followed by a short lower-case name."
+    fields:
+      - { name: status, kind: enum, values: [planned, running, ended] }
+      - { name: funder, kind: key }
+      - { name: next_report, kind: date }
+    sections: [Summary, Members and partners, Grants, Reports, Notes]
+    signals:
+      - A grant, a member benefit or a recurring program
+    update_rules:
+      auto: [status, funder, next_report]
+      needs_yes: []
+    list_views:
+      - { name: reports_due, sort: next_report, desc: false }

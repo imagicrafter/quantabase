@@ -1,0 +1,7 @@
+# Two dots in a row are not allowed in an address.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner..name@example.com

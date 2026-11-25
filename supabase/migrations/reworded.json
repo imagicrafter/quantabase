@@ -1,0 +1,7 @@
+{
+  "why": "Files whose comments were reworded after they were applied (no SQL changed). An Engine that applied the earlier text recorded the checksum listed here; the kbe CLI and the Database screen both accept it. Never list a file whose SQL changed.",
+  "files": {
+    "0057_curator_wake_and_claim.sql": ["4bb56735e68a4c15ca007cf58f3341193b46d717c133ae5a18e2213190f381fc"],
+    "0058_knowledge_ui.sql": ["18d6bed0cf7671a87b185fbea459607a830a5e85cf593f47f6c3faa01deef522"]
+  }
+}

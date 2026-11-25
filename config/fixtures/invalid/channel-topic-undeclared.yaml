@@ -1,0 +1,9 @@
+# A channel must map to a declared topic.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+sources:
+  fireflies: { channels: { Clients: consulting } }

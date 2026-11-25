@@ -1,0 +1,30 @@
+# Every source on, with the Drive tag rules and one mailbox.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+domains:
+  - { id: consulting, label: Consulting }
+  - { id: private, label: Private, sensitive: true }
+tagging: { prefix: "kx/", frontmatter_key: domains }
+sources:
+  wiki: { enabled: true, repo: acme/knowledge, default_domain: consulting }
+  drive:
+    enabled: true
+    include_mime: [docs, sheets, slides, pdf]
+    trust_tags_from: anyone
+  fireflies:
+    enabled: true
+    channels: { Clients: consulting }
+    shared_meetings: { enabled: true, trusted_domains: [example.com] }
+  gmail:
+    enabled: true
+    prefix: "kx-"
+    mailboxes:
+      - { email: owner@example.com, owner_email: null }
+models:
+  distill: { backend: do, id: openai-gpt-oss-120b }
+support:
+  care_plan: { enabled: true }

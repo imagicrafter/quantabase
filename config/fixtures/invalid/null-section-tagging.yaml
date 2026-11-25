@@ -1,0 +1,8 @@
+# A section written with nothing under it is null, not left out.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+tagging:

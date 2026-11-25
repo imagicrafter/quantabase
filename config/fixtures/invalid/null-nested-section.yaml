@@ -1,0 +1,9 @@
+# A nested section written as null (`sources.wiki:`).
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+sources:
+  wiki:

@@ -1,0 +1,9 @@
+# A quoted word such as "yes" is text, so it is fine where text is wanted.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  title: "yes"

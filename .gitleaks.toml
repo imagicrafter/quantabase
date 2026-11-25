@@ -1,0 +1,12 @@
+# Gitleaks config: the default rules, plus one narrow exception.
+[extend]
+useDefault = true
+
+# engine/tests/app/fake-supabase.ts held made-up test values (a pretend
+# Supabase management token and anon key) in commit 92091a6 on the Step D
+# branch. They were never real and are now plainly fake. History is scanned,
+# so that one file is excused from the one rule it tripped.
+[[allowlists]]
+description = "fake Supabase test fixtures (Step D)"
+targetRules = ["generic-api-key"]
+paths = ['''^engine/tests/app/fake-supabase\.ts$''']

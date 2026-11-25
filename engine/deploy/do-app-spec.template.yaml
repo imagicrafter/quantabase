@@ -1,0 +1,202 @@
+# DigitalOcean App Platform spec -- TEMPLATE.
+#
+# Do not hand this file to `doctl`. `python -m kbe deploy render` fills it in
+# and writes the real spec to `.kb-engine-local/do-app-spec.yaml` (git-ignored);
+# `python -m kbe deploy apply` creates or updates the app from that file.
+#
+# What the renderer fills in (scripts/kbe/deploy_render.py):
+#   name, region            the app's name and region
+#   git: / github:          where every component builds from. Added to the
+#                           service and to each job; never written here.
+#   services[0].envs        KB_SCHEMA when the schema is not the default, and
+#                           the sign-in variables for a deployment that keeps
+#                           them in its environment instead of the database
+#   jobs                    the ONE job below is a pattern. It is copied once
+#                           per source that is enabled in the Engine config,
+#                           with that source's name, schedule and credentials.
+#   domains[0].domain       the Engine's public hostname
+#
+# NO SECRET VALUES, by design. Every secret is declared `type: SECRET` with no
+# `value:`. After the app is created, `python -m kbe deploy secrets push`
+# sets the values on the app from the local env file (or a person enters
+# them in the DigitalOcean dashboard). `kbe deploy apply` lists which ones.
+#
+# Once an app exists, its LIVE spec is the truth. `kbe deploy apply` reads it
+# first and carries the stored secret values over, so an update never blanks
+# one. Never push a spec over a running app by hand.
+#
+# COST: one service plus one scheduled job per enabled source. Check the
+# billing estimate in the dashboard before the first deploy finishes.
+
+name: app-name
+region: nyc
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+services:
+  - name: kb-engine
+
+    # The service builds from the engine/ folder of the source repository.
+    source_dir: /engine
+
+    build_command: npm ci && npm run build
+    run_command: node dist/index.js
+
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+    http_port: 8080
+
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 5
+      period_seconds: 10
+      failure_threshold: 3
+
+    alerts:
+      - rule: RESTART_COUNT
+        operator: GREATER_THAN
+        value: 3
+        window: TEN_MINUTES
+      - rule: MEM_UTILIZATION
+        operator: GREATER_THAN
+        value: 85
+        window: FIVE_MINUTES
+
+    envs:
+      # ---- Secrets. Set with `kbe deploy secrets push`; never a `value:` here. ----
+
+      - key: SUPABASE_URL
+        type: SECRET
+        scope: RUN_TIME
+      # Project JWT secret. Used to sign a short-lived database token for the
+      # service's own role. The service never holds the service-role key.
+      - key: SUPABASE_JWT_SECRET
+        type: SECRET
+        scope: RUN_TIME
+      - key: SUPABASE_ANON_KEY
+        type: SECRET
+        scope: RUN_TIME
+      # Token of the service's own principal, used to call the embed function.
+      - key: EMBED_TOKEN
+        type: SECRET
+        scope: RUN_TIME
+      # The one-time code that opens the /setup page. `kbe access init` hands
+      # it over once (the clipboard or an owner-only file) and stores only its
+      # hash in the database.
+      - key: SETUP_CODE
+        type: SECRET
+        scope: RUN_TIME
+
+      # ---- Plain settings ----
+      #
+      # The sign-in settings (team domain, AUD tags, hostname) are NOT here:
+      # the /setup page stores them in the database and the service reads them
+      # from there. They are not secrets, and a deployment that prefers to
+      # keep them in its environment can ask the renderer to add them
+      # (`kbe deploy render --cf-team-domain ... --cf-aud ...`).
+
+      - key: PORT
+        value: "8080"
+        scope: RUN_TIME
+
+      # RUN_TIME only, deliberately. NODE_ENV=production at build time would
+      # make `npm ci` skip devDependencies, and the build needs typescript.
+      - key: NODE_ENV
+        value: production
+        scope: RUN_TIME
+
+      - key: LOG_LEVEL
+        value: info
+        scope: RUN_TIME
+
+      # 0.5 GB instance. Leaves headroom for the container itself.
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384
+        scope: RUN_TIME
+
+      - key: SOURCE_COMMIT
+        value: ${_self.commit_hash}
+        scope: RUN_TIME
+
+      # Lets the Updates screen link straight to this app in the dashboard.
+      - key: APP_ID
+        value: ${APP_ID}
+        scope: RUN_TIME
+
+jobs:
+  # THE JOB PATTERN. One `kind: SCHEDULED` job per enabled source, so one
+  # dead source cannot stop the others. The renderer copies this block, names
+  # it `puller-<source>`, staggers the schedules so the jobs never compete
+  # for the model or the database, and adds the source's own credentials.
+  #
+  # CREDENTIAL BOOTSTRAP. The pipeline reads its credentials from a local
+  # `.env` FILE, on every host, through one code path. The platform puts
+  # secrets into the job's process environment instead. So the start command
+  # first writes the selected variables from the environment into `.env`,
+  # then runs the puller. It is a shell line here, not Python, so that no
+  # program in the repository ever reads credentials from its environment.
+  #
+  # THE REGEX TRAP. The pattern must keep `[A-Z0-9_]*` between the group and
+  # the `=`. Without it a PREFIX such as `SUPABASE_` matches only a variable
+  # named exactly `SUPABASE`, the file comes out nearly empty, nothing
+  # errors, and the job fails later with a misleading "missing keys" message.
+  # `{sweep}` and `{source}` are filled in by the renderer.
+  - name: puller
+    kind: SCHEDULED
+    schedule:
+      cron: "0 11 * * *"
+    source_dir: /
+    # Names the buildpack outright. Detection alone depends on a
+    # requirements.txt at the repository root (which is there for the same
+    # reason); with neither, the build fails before the build command runs.
+    environment_slug: python
+    build_command: pip install -r pullers/requirements.txt
+    run_command: |
+      env | grep -E '^({sweep})[A-Z0-9_]*=' > .env
+      python -m pullers.runner --source {source}
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+    envs:
+      - key: PYTHONPATH
+        value: /workspace/scripts:/workspace
+        scope: RUN_TIME
+      - key: SUPABASE_URL
+        type: SECRET
+        scope: RUN_TIME
+      - key: SUPABASE_JWT_SECRET
+        type: SECRET
+        scope: RUN_TIME
+      - key: SUPABASE_ANON_KEY
+        type: SECRET
+        scope: RUN_TIME
+      - key: KNOWLEDGE_EMBED_BACKEND
+        value: remote
+        scope: RUN_TIME
+      - key: KNOWLEDGE_EMBED_URL
+        type: SECRET
+        scope: RUN_TIME
+      - key: KNOWLEDGE_EMBED_TOKEN
+        type: SECRET
+        scope: RUN_TIME
+      # Added per job by the renderer: the model backend, its id and its key;
+      # the source's own credentials; KB_SCHEMA when not the default.
+
+domains:
+  - domain: engine.example.com
+    type: PRIMARY
+    minimum_tls_version: "1.3"
+    # DNS: point this hostname at the app's default *.ondigitalocean.app
+    # address (`kbe deploy apply` prints it). The /setup page can create the
+    # record for you.
+
+# NOT SET, deliberately:
+#
+#   egress.type: DEDICATED_IP
+#     Leaving it out of a LATER update permanently releases the addresses, and
+#     it would not help: database network restrictions do not cover the HTTPS
+#     API path the Engine uses.
+#
+#   Any component that is not listed above
+#     Each one adds to the monthly bill.

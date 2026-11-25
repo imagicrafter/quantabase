@@ -1,0 +1,9 @@
+# The connector address must be a URL.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  connect: { connector_url: not a url }

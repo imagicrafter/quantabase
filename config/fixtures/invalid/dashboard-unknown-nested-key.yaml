@@ -1,0 +1,11 @@
+# An unknown key deeper in the dashboard.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  knowledge:
+    sources:
+      - { id: documents, label: Documents, sensor: static, business: [a] }

@@ -1,0 +1,12 @@
+# One mailbox is supported.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+sources:
+  gmail:
+    mailboxes:
+      - { email: a@example.com }
+      - { email: b@example.com }

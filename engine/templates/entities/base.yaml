@@ -1,0 +1,214 @@
+# The eight drawers every Engine has. A drawer is a broad category that will
+# hold dozens of pages, each living for months and gathering mail, meetings
+# and files. Anything narrower is a section inside a page.
+name: base
+label: Basic drawers
+description: The eight drawers in every template.
+# What the curator writes at all (the same bar a careful person uses when
+# filing a wiki by hand). A drawer may replace `durability` with its own
+# `curator.durability`. An item with nothing that passes is "no change".
+curator:
+  durability:
+    - "Durable: still relevant six months from now"
+    - "Reusable: informs future decisions, not only today's"
+    - "Not derivable: not obvious from the source system itself (a calendar, a ticket, a commit)"
+    - "Specific: concrete enough to write a whole dated sentence with names, numbers or reasons"
+  skip:
+    - Operational chatter and status that changes daily
+    - Pleasantries, thanks, greetings and sign-offs
+    - Routine logistics (scheduling, rescheduling, links, confirmations, read receipts)
+    - Anything already on the page, even reworded
+  # Name or embedding score at which a new page without a strong key is
+  # filed on an existing page instead (a drawer may set its own).
+  match_threshold: 0.9
+  # Embedding similarity at which two pages go on the nightly
+  # "Possible duplicates" list (never merged automatically).
+  duplicate_threshold: 0.92
+  # Token budget of the page index shown to the curator.
+  index_tokens: 1500
+  # Page shape: every page the curator changes gets a dated one-line entry
+  # at the top under this heading (newest first, at most updates_max), and a
+  # new page's title is at most title_max characters. "" turns the list off.
+  page_shape:
+    updates_heading: Major updates
+    updates_max: 5
+    title_max: 60
+    # Where dated events go: the first of these the page already has. A
+    # patch to a section the page lacks goes there instead of a new
+    # "Timeline"-like section.
+    events_sections: [Key Interactions, Timeline]
+drawers:
+  - id: people
+    label: People
+    icon: user
+    key_rule:
+      kind: email
+      text: The person's main email address, lower case.
+      identities: emails
+      fallback: person
+    fields:
+      - { name: organisation, kind: key, text: Key of the person's organisation page }
+      - { name: role, kind: text }
+      - { name: last_contact, kind: date }
+      - { name: next_step, kind: text }
+      - { name: next_date, kind: date }
+    sections: [Summary, Contact, Working with them, Timeline, Notes]
+    signals:
+      - A sender or attendee who appears more than once
+      - A named person in a meeting or file who is not yet a page
+    update_rules:
+      auto: [organisation, role, last_contact, next_step, next_date]
+      needs_yes: []
+    curator:
+      links_to: [organisations, projects, deals]
+    list_views:
+      - { name: recent_contact, sort: last_contact, desc: true }
+      - { name: follow_up, sort: next_date, desc: false }
+
+  - id: organisations
+    label: Organisations
+    icon: building
+    key_rule:
+      kind: domain
+      text: The organisation's web domain, lower case, without www.
+      identities: domains
+      fallback: org
+    fields:
+      - { name: role, kind: enum, values: [client, prospect, partner, vendor, member, tenant, other] }
+      - { name: stage, kind: text }
+      - { name: last_contact, kind: date }
+      - { name: next_step, kind: text }
+      - { name: next_date, kind: date }
+    sections: [Summary, People, Work together, Timeline, Notes]
+    signals:
+      - Mail from or to an address at the domain
+      - A company named in a meeting title or file name
+    update_rules:
+      auto: [role, stage, last_contact, next_step, next_date]
+      needs_yes: []
+    curator:
+      links_to: [people]
+    list_views:
+      - { name: by_role, filter: role, sort: last_contact, desc: true }
+
+  - id: projects
+    label: Projects
+    icon: briefcase
+    key_rule:
+      kind: slug
+      text: "project: followed by a short lower-case name, e.g. project:website-rebuild."
+      # Consensus runs compare new project pages by organisation, not by key.
+      anchor: { field: organisation }
+    fields:
+      - { name: organisation, kind: key }
+      - { name: status, kind: enum, values: [proposed, active, paused, done, dropped] }
+      - { name: start_date, kind: date }
+      - { name: due_date, kind: date }
+      - { name: next_step, kind: text }
+    sections: [Summary, Scope, Deliverables, Out of scope asks, Timeline, Notes]
+    signals:
+      - A piece of work with a start, an end and a named outcome
+    update_rules:
+      auto: [organisation, status, start_date, due_date, next_step]
+      needs_yes: []
+    curator:
+      links_to: [organisations, people]
+    list_views:
+      - { name: active, filter: status, sort: due_date, desc: false }
+
+  - id: meetings
+    label: Meetings
+    icon: calendar
+    key_rule:
+      kind: source_id
+      text: "meeting: followed by the meeting id from its source, e.g. meeting:01abc."
+      sources: [fireflies, meetings, meeting, calendar, zoom, teams]
+    fields:
+      - { name: date, kind: date }
+      - { name: organisation, kind: key }
+      - { name: project, kind: key }
+    sections: [Summary, Decisions, Actions, Notes]
+    signals:
+      - A meeting transcript or calendar event with notes
+    update_rules:
+      auto: [date, organisation, project]
+      needs_yes: []
+    curator:
+      links_to: [organisations, projects]
+    list_views:
+      - { name: recent, sort: date, desc: true }
+
+  - id: decisions
+    label: Decisions
+    icon: scale
+    key_rule:
+      kind: slug
+      text: "decision: followed by a short lower-case name."
+    fields:
+      - { name: date, kind: date }
+      - { name: project, kind: key }
+      - { name: status, kind: enum, values: [proposed, decided, reversed] }
+    sections: [Context, Decision, Why, Consequences]
+    signals:
+      - '"We decided", "agreed" or "going with" in a meeting or thread'
+    update_rules:
+      auto: [date, project, status]
+      needs_yes: []
+    curator:
+      judgement: high
+    list_views:
+      - { name: recent, sort: date, desc: true }
+
+  - id: concepts
+    label: Concepts
+    icon: bulb
+    key_rule:
+      kind: slug
+      text: "concept: followed by a short lower-case name."
+    fields: []
+    sections: [Summary, How it works, Related]
+    signals:
+      - An idea, method or term explained more than once
+    update_rules:
+      auto: []
+      needs_yes: []
+    curator:
+      judgement: high
+    list_views: []
+
+  - id: research
+    label: Research
+    icon: search
+    key_rule:
+      kind: slug
+      text: "research: followed by a short lower-case name."
+    fields:
+      - { name: date, kind: date }
+    sections: [Question, Findings, Sources, Open questions]
+    signals:
+      - A report, study or comparison gathered to answer a question
+    update_rules:
+      auto: [date]
+      needs_yes: []
+    curator:
+      judgement: high
+    list_views:
+      - { name: recent, sort: date, desc: true }
+
+  - id: playbooks
+    label: Playbooks
+    icon: book
+    key_rule:
+      kind: slug
+      text: "playbook: followed by a short lower-case name."
+    fields:
+      - { name: owner, kind: key }
+    sections: [When to use, Steps, Pitfalls, History]
+    signals:
+      - Steps that are repeated, a runbook, a retrospective or an incident note
+    update_rules:
+      auto: [owner]
+      needs_yes: []
+    curator:
+      judgement: high
+    list_views: []

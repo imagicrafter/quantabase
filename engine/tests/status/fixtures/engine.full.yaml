@@ -1,0 +1,217 @@
+# A full Engine config for the status-page tests: every optional panel is on,
+# including the add-on ones (agent jobs, a build workshop, client Engines, a
+# support desk). A real Engine names only the parts it has.
+
+version: 1
+
+engine:
+  id: acme
+  name: "Acme's Knowledge Base Engine"
+  owner:
+    email: owner@example.com
+    names: ["Pat Owner"]
+    emails: [owner@example.com]
+
+domains:
+  - { id: consulting, label: Consulting }
+  - { id: partners, label: Partners }
+  - { id: operations, label: Operations }
+  - { id: private, label: Private, sensitive: true }
+
+tagging:
+  prefix: "kx/"
+  frontmatter_key: domains
+
+sources:
+  wiki: { enabled: true, repo: acme/knowledge }
+  drive: { enabled: true }
+  fireflies: { enabled: true }
+  gmail: { enabled: false }
+
+dashboard:
+  title: "Acme's Knowledge Base Engine"
+  menus:
+    knowledge: [overview, sources, areas, review]
+    workers: [tasks]
+    tools: [connected, support_desk]
+    security: [layers, people, systems]
+  ask_claude_buttons: true
+
+  connect:
+    connector_url: https://engine.example.com/mcp
+    login: email-code
+    status_page_url: https://engine.example.com/status
+    status_page_login: email-code + 2fa
+    status_page_aud: status-app-aud-tag-0001
+
+  knowledge:
+    # The wiki is the Knowledge itself, not a source: its puller copies every
+    # page into search, so it is shown as the Search index.
+    index:
+      label: Search index
+      sensor: connector_state:wiki
+      schedule: "nightly 6:00 AM"
+      fresh_within: 26h
+      alert_after: 48h
+    sources:
+      - id: documents
+        label: Documents
+        sensor: connector_state:drive
+        connection: "Acme Google Drive · approved folders"
+        owner: acme
+        share: "A file in an area's folder belongs to that area"
+        schedule: "nightly 6:20 AM"
+      - id: meetings
+        label: Meetings
+        sensor: connector_state:fireflies
+        connection: "Pat's Fireflies"
+        owner: owner@example.com
+        share: "Fireflies channel kx/[area]. Notes only; recordings stay in Fireflies"
+        schedule: "nightly 6:40 AM"
+      - id: email
+        label: Email
+        sensor: connector_state:gmail
+        connection: "owner@ mailbox"
+        owner: owner@example.com
+        share: "Label a thread kx/[area]. Unlabeled mail never comes in"
+        enabled: false
+        off_reason: "Paused. Turns back on with kx/ labels, so only mail you label is shared."
+    review_queue:
+      label: Waiting for review
+      sensor: review_items:undecided
+      warn_over: 25
+    area_notes:
+      unclassified: "Pages the Engine could not place yet. Locked until each gets a real area."
+      consulting: "Consulting client work"
+      partners: "Partner projects"
+      operations: "How Acme's systems run"
+      private: "Personal life"
+
+  workers:
+    - id: watch
+      role: caretaker
+      label: Watcher
+      does: "Caretaker: watches that things get done, raises cards, checks the proof"
+      jobs:
+        - sensor: agent_job:watch/kb-health
+          schedule: "15 */2 * * *"
+          late_after: 3h
+          task: "Keep Knowledge fresh and fix what is safe"
+          when: "Every 2 hours"
+        - sensor: agent_job:watch/run-watch
+          schedule: "55 * * * *"
+          late_after: 2h
+        - sensor: agent_job:watch/sandbox-heal
+          schedule: "every 5m"
+          late_after: 30m
+        - sensor: agent_job:watch/secrets-check
+          schedule: "30 6 * * *"
+          late_after: 26h
+        - sensor: agent_job:watch/board-steward
+          schedule: "0 7-21/2 * * *"
+          late_after: 3h
+          task: "Follow up on stuck work"
+          when: "Every 2 hours, daytime"
+        - sensor: agent_job:watch/wiki-writer
+          schedule: "0 9 * * *"
+          late_after: 26h
+          task: "Write meeting notes into the wiki"
+          when: "Daily, 9 AM"
+        - sensor: agent_job:watch/review-queue-auto
+          schedule: "30 8 * * *"
+          late_after: 26h
+          task: "Sort new knowledge for your review"
+          when: "Daily, 8:30 AM"
+        - sensor: agent_job:watch/weekly-digest
+          schedule: "0 7 * * 1"
+          late_after: 8d
+          task: "Monday summary email"
+          when: "Mondays, 7 AM"
+        - sensor: agent_job:watch/northwind-inbox
+          schedule: "20 * * * *"
+          late_after: 2h
+          task: "Check Northwind's issue inbox"
+          when: "Every hour"
+      uses:
+        [
+          knowledge.index,
+          knowledge.documents,
+          knowledge.meetings,
+          tools.slack,
+          tools.email,
+          tools.github,
+        ]
+      reports_to: owner@example.com
+
+    - id: build
+      role: worker
+      label: Builder
+      does: "Worker: takes each card, hands heavy work to its tools, reports back"
+      jobs:
+        - sensor: agent_job:build/workshop-dispatch
+          schedule: "every 2m"
+          late_after: 15m
+          task: "Build, test and ship fixes"
+          when: "As work comes in"
+        - sensor: agent_job:build/merge-gate
+          schedule: "every 15m"
+          late_after: 1h
+      uses: [tools.workshop, tools.github, tools.merge-gate, tools.slack]
+      reports_to: watch
+
+  tools:
+    connected:
+      - id: slack
+        label: Slack
+        does: "One thread per item in the right channel"
+        can: [post, thread]
+        sensor: host_state:slack-status.json
+      - id: email
+        label: Email
+        does: "Drafts and the Monday summary; never sends to clients"
+        can: [draft]
+        sensor: static
+      - id: drive
+        label: Google Drive
+        does: "Reads approved folders into Knowledge"
+        can: [read]
+        sensor: connector_state:drive
+    support_desk:
+      enabled: true
+      note: "Support Desk is only on Acme's Engine. Client Engines do not show it."
+      default_issue_source: Acme
+      tools:
+        - id: workshop
+          label: Build workshop
+          does: "Builds and tests every fix in a sealed copy; one job at a time"
+          can: [build, test, open-pull-request]
+          sensor: workshop_jobs
+        - id: github
+          label: GitHub
+          does: "Pull requests in acme repos only"
+          can: [read, open-pull-request]
+          sensor: github_prs:acme
+        - id: merge-gate
+          label: Merge gate
+          does: "Merges safe fixes; anything touching money, clients or security waits for the owner"
+          can: [review, merge-green, merge-yellow-after-1h]
+          sensor: agent_job:build/merge-gate
+      client_engines:
+        - id: northwind
+          label: Northwind Traders
+          repo: acme/northwind-engine
+          sensor: client_inbox:northwind
+        - id: harbor
+          label: Harbor's Engine
+          repo: null
+          status: planned
+
+  security:
+    login_check_sensor: agent_job:watch/secrets-check
+    systems_static:
+      - handle: kb_ingest
+        name: "Source readers + Caretaker checks"
+        what: "Adds and updates sources. Cannot delete."
+    system_notes:
+      kb-engine: "Turns search text into vectors. No knowledge access."
+      watch-embed: "The Watcher's search helper. No knowledge access."

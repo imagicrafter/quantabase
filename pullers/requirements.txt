@@ -1,0 +1,16 @@
+# Python packages for the scheduled jobs (`pullers.runner`) and the `kbe` CLI.
+# Deliberately NOT sentence-transformers -- it will not fit a 0.5 GB
+# container. Embedding runs KNOWLEDGE_EMBED_BACKEND=remote (see
+# scripts/knowledge/embedder.py) via plain HTTP, no local model.
+
+supabase>=2.0.0
+python-dotenv
+PyJWT>=2.8.0
+requests
+google-api-python-client
+google-auth-oauthlib
+PyYAML
+# Checks engine.yaml against config/schema.json (scripts/knowledge/engine_config_schema.py).
+jsonschema>=4.0
+# Only used when models.distill.backend is `anthropic`.
+anthropic

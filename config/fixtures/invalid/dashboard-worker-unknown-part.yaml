@@ -1,0 +1,10 @@
+# A worker may only use a part that exists.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  workers:
+    - { id: keeper, label: Keeper, uses: [tools.nothing] }

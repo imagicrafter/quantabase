@@ -1,0 +1,10 @@
+# A worker is a caretaker or a worker.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  workers:
+    - { id: keeper, label: Keeper, role: boss }

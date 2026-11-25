@@ -1,0 +1,7 @@
+# An id starts with a lower-case letter.
+version: 1
+engine:
+  id: Acme Inc
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com

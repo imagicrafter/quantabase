@@ -1,0 +1,7 @@
+# `true` is not the number 1.
+version: true
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com

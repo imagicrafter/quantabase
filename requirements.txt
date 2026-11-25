@@ -1,0 +1,7 @@
+# DigitalOcean App Platform picks the Python buildpack for the source jobs
+# (`puller-<source>`) by finding this file at the repository root. Without
+# it the build stops with "could not detect app files that match known
+# buildpacks" before the job's build command ever runs.
+#
+# The real list lives in pullers/requirements.txt. Keep it there.
+-r pullers/requirements.txt

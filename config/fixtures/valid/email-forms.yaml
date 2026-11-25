@@ -1,0 +1,8 @@
+# Addresses both validators accept: a plus tag, an apostrophe, a sub-domain.
+version: 1
+engine:
+  id: acme
+  name: Acme
+  owner:
+    email: pat.o'neil+engine@mail.example.co.uk
+    emails: [Pat_Owner@example.com]

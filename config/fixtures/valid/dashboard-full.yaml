@@ -1,0 +1,55 @@
+# A dashboard that uses every section and satisfies every cross-field rule.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+domains:
+  - { id: consulting, label: Consulting }
+  - { id: private, label: Private, sensitive: true }
+sources:
+  wiki: { enabled: true, repo: acme/knowledge }
+  drive: { enabled: true }
+dashboard:
+  title: Acme status
+  ask_claude_buttons: false
+  menus:
+    knowledge: [overview, sources, areas, review]
+    workers: [tasks]
+    tools: [connected, support_desk]
+    security: [layers, people, systems]
+    support: [issues]
+  connect:
+    connector_url: https://engine.example.com/mcp
+    login: email-code
+    status_page_url: https://engine.example.com/status
+  knowledge:
+    index: { label: Search index, sensor: "connector_state:wiki", fresh_within: 26h }
+    sources:
+      - { id: documents, label: Documents, sensor: "connector_state:drive", alert_after: 7d }
+      - { id: meetings, label: Meetings, sensor: static, enabled: false, off_reason: Not set up yet }
+    review_queue: { label: Waiting for review, sensor: "review_items:undecided", warn_over: 10 }
+    area_notes: { consulting: Client work }
+  workers:
+    - id: keeper
+      role: caretaker
+      label: Keeper
+      jobs:
+        - { sensor: "agent_job:keeper/daily-check", task: Daily check, when: Every day, late_after: 30m }
+        - { sensor: workshop_jobs }
+      uses: [knowledge.index, knowledge.documents, tools.tracker, tools.desk]
+  tools:
+    connected:
+      - { id: tracker, label: Tracker, sensor: static, can: [list items] }
+    support_desk:
+      enabled: true
+      tools:
+        - { id: desk, label: Desk, sensor: static }
+      client_engines:
+        - { id: other, label: Other Engine, repo: null, sensor: "client_inbox:other" }
+  security:
+    systems_static:
+      - { handle: host, name: Host, what: Where the service runs }
+    system_notes: { host: Patched monthly }
+    login_check_sensor: "agent_job:keeper/login-check"

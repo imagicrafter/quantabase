@@ -1,0 +1,21 @@
+/** A synthetic session note: nothing here comes from a real session. */
+export const NOTE = {
+  session_id: "0b5c6c1e-1111-4222-8333-944455556666",
+  project: "demo-project",
+  started_at: "2026-11-24T09:00:00Z",
+  ended_at: "2026-11-24T11:30:00Z",
+  items: [
+    {
+      label: "decided",
+      text: "Release 2.0 ships on 2026-12-01, not in November.",
+      quotes: [{ who: "owner", text: "ok, let's ship 2.0 on Dec 1 instead" }],
+      pages: [{ key: "project:northwind-route-pilot", title: "Northwind pilot", whats_new: "new ship date 2026-12-01" }],
+    },
+    {
+      label: "idea",
+      text: "A nightly export to the shared drive was floated.",
+      quotes: [{ who: "assistant", text: "One option is a nightly export to the shared drive." }],
+      new_pages: [{ drawer: "decisions", title: "Nightly export", key: "decision:nightly-export", why: "may become a decision" }],
+    },
+  ],
+};

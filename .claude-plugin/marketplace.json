@@ -1,0 +1,17 @@
+{
+  "name": "quantabase",
+  "owner": {
+    "name": "imagicrafter.ai",
+    "url": "https://imagicrafter.ai"
+  },
+  "metadata": {
+    "description": "The Claude plugin for Quantabase: feed your own knowledge Engine from Claude's connectors."
+  },
+  "plugins": [
+    {
+      "name": "qb-engine",
+      "source": "./plugin/qb-engine",
+      "description": "Copy new Gmail threads, Drive files, Fireflies meetings and Calendar events into your own knowledge Engine on a schedule, on the smallest model, and send short Claude Code session notes by hand. Curation runs on the Engine."
+    }
+  ]
+}

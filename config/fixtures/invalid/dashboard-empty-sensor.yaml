@@ -1,0 +1,11 @@
+# A sensor is not empty.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  tools:
+    connected:
+      - { id: tracker, label: Tracker, sensor: "" }

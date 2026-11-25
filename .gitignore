@@ -1,0 +1,23 @@
+# Never commit credentials. Every reader in this repo uses dotenv_values(".env").
+.env
+.env.*
+!.env.example
+*token*.json
+service-account*.json
+
+# Build output / deps
+node_modules/
+dist/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local setup state written by `kbe` (progress and non-secret answers)
+.kb-engine-local/
+
+# Local Supabase CLI scratch
+supabase/.temp/
+supabase/.branches/
+
+.DS_Store

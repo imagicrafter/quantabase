@@ -1,0 +1,12 @@
+# Only what the Dockerfile copies is needed. Keep secrets and local state out
+# of the build context entirely.
+.env
+.env.*
+.git
+.venv
+.kb-engine-local
+**/node_modules
+**/dist
+**/__pycache__
+supabase/.temp
+supabase/.branches

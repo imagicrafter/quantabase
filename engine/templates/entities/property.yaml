@@ -1,0 +1,44 @@
+# Rentals and holdings. Units, leases, tenants' terms and repairs are
+# sections of the Property page, not drawers.
+name: property
+label: Property
+description: Rentals and holdings. Adds Properties and Vendors.
+drawers:
+  - id: properties
+    label: Properties
+    icon: house
+    key_rule:
+      kind: slug
+      text: "property: followed by the street address in lower case with dashes."
+    fields:
+      - { name: kind, kind: enum, values: [residential, commercial, land, mixed] }
+      - { name: units, kind: number }
+      - { name: occupancy, kind: text }
+      - { name: next_lease_end, kind: date }
+      - { name: next_step, kind: text }
+    sections: [Summary, Units, Leases, Tenants, Repairs, Money, Notes]
+    signals:
+      - A street address with leases, rent, repairs or tenants
+    update_rules:
+      auto: [kind, units, occupancy, next_lease_end, next_step]
+      needs_yes: []
+    list_views:
+      - { name: lease_ends, sort: next_lease_end, desc: false }
+
+  - id: vendors
+    label: Vendors
+    icon: truck
+    key_rule:
+      kind: domain
+      text: The vendor's web domain, lower case, without www.
+    fields:
+      - { name: supplies, kind: text }
+      - { name: last_order, kind: date }
+    sections: [Summary, Contacts, Terms, Orders, Notes]
+    signals:
+      - Invoices, quotes or orders from a supplier
+    update_rules:
+      auto: [supplies, last_order]
+      needs_yes: []
+    list_views:
+      - { name: recent, sort: last_order, desc: true }

@@ -1,0 +1,12 @@
+# Obsidian keeps per-machine window state here; the rest of .obsidian/ is
+# shared settings and may be committed.
+.obsidian/workspace*
+.obsidian/cache
+.trash/
+
+# Never commit credentials.
+.env
+.env.*
+*token*.json
+
+.DS_Store

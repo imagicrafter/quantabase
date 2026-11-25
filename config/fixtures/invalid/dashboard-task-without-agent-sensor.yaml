@@ -1,0 +1,13 @@
+# A job with a task needs an agent_job sensor.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  workers:
+    - id: keeper
+      label: Keeper
+      jobs:
+        - { sensor: static, task: Daily check }

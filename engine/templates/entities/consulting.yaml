@@ -1,0 +1,63 @@
+# Consultants, agencies and partners. Scope of work, deliverables and
+# out-of-scope asks are sections of the Project page, not drawers.
+name: consulting
+label: Consulting
+description: Consultants, agencies and partners. Adds Deals and Offers.
+drawers:
+  - id: deals
+    label: Deals
+    icon: dollar
+    key_rule:
+      kind: slug
+      text: "deal: followed by the organisation domain and a short name, e.g. deal:example.com-2026-audit."
+      # One open deal per organisation: consensus runs are compared by
+      # organisation, and an open deal (stage not won or lost) is updated,
+      # never duplicated.
+      anchor: { field: organisation, single_open: { field: stage, closed: [won, lost] } }
+    fields:
+      - { name: organisation, kind: key }
+      - { name: stage, kind: enum, values: [lead, qualified, proposal, negotiation, won, lost] }
+      - { name: value, kind: number }
+      - { name: next_step, kind: text }
+      - { name: next_date, kind: date }
+      - { name: last_contact, kind: date }
+    sections: [Summary, Need, Proposal, Timeline, Notes]
+    signals:
+      - A request for a price, a proposal or a scope of work
+      - The item names money (a budget, price, fee or value) or asks for a price, a proposal, a quote or a scope of work
+    update_rules:
+      auto: [organisation, stage, value, next_step, next_date, last_contact]
+      needs_yes: []
+    curator:
+      links_to: [organisations, people, projects]
+      # Patterns (case-insensitive regular expressions) on the item's text. When
+      # one matches, the reply must make or update a page in this drawer; if it
+      # does not, the curator asks once more, then records a failed check.
+      required_when:
+        - '\$\s?\d'
+        - '\b\d[\d,.]*\s?(k|usd|dollars|eur|euros|gbp|pounds)\b'
+        - '\b(budget|price|pricing|fee|fees|quote|quotation|proposal|sow|scope of work)\b'
+      notes:
+        - Set "value" and "stage" on a new deal page when the item states them
+        - A project page does not replace the deal page; make both when both apply
+    list_views:
+      - { name: pipeline, filter: stage, sort: next_date, desc: false }
+      - { name: by_value, sort: value, desc: true }
+
+  - id: offers
+    label: Offers
+    icon: tag
+    key_rule:
+      kind: slug
+      text: "offer: followed by a short lower-case name."
+    fields:
+      - { name: price, kind: text }
+      - { name: status, kind: enum, values: [draft, active, retired] }
+    sections: [What it is, Who it is for, Price, What is included, Notes]
+    signals:
+      - A packaged service described the same way to more than one client
+    update_rules:
+      auto: [price, status]
+      needs_yes: []
+    list_views:
+      - { name: active, filter: status }

@@ -1,0 +1,130 @@
+{
+  "now": "2026-11-20T03:00:00Z",
+  "log": [
+    { "saved_at": "2026-11-12T09:30:00Z", "key": "project:widget-rollout", "title": "Widget Rollout", "drawer": "projects", "by": "owner@example.com", "first": false, "deleted": false },
+    { "saved_at": "2026-11-02T08:00:00Z", "key": "project:widget-rollout", "title": "Widget Rollout", "drawer": "projects", "by": "owner@example.com", "first": true, "deleted": false }
+  ],
+  "pages": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "key": "alex@example.com", "drawer": "people", "template": null,
+      "title": "Alex Tester", "aliases": ["AT"], "description": "Runs operations",
+      "fields": { "emails": ["alex@widgets.example"], "organisation": "Widgets Ltd", "role": "Ops" },
+      "topics": ["consulting"], "status": "current", "reviewed": "2026-11-10T12:00:00Z",
+      "tags": ["contact"], "related": ["widgets.example"],
+      "sources": [{ "source": "wiki", "source_id": "people/alex.md" }],
+      "generated": null, "verified": [],
+      "body": "Runs ops at [[Widgets Ltd]].\n",
+      "created_at": "2026-10-01T10:00:00Z", "updated_at": "2026-11-10T12:00:00Z",
+      "owner": "owner@example.com",
+      "links": [
+        { "target_key": "contact", "reason": "tag" },
+        { "target_key": "widgets.example", "reason": "related" },
+        { "target_key": "widgets.example", "reason": "wikilink" }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "key": "widgets.example", "drawer": "organisations", "template": null,
+      "title": "Widgets Ltd", "aliases": [], "description": null,
+      "fields": { "domains": ["widgets.co.example"] },
+      "topics": ["consulting"], "status": "unreviewed", "reviewed": null,
+      "tags": [], "related": [],
+      "sources": [{ "source": "gmail", "source_id": "thread-9" }, { "source": "wiki", "source_id": "orgs/widgets.md" }],
+      "generated": null, "verified": [],
+      "body": "# Widgets Ltd\n\nContact: [[Alex Tester]].\n\n---\nA rule, and a [[Missing Page]] link.",
+      "created_at": "2026-10-02T10:00:00Z", "updated_at": "2026-10-03T10:00:00Z",
+      "owner": "owner@example.com",
+      "links": [
+        { "target_key": "alex@example.com", "reason": "wikilink" },
+        { "target_key": "missing page", "reason": "wikilink" }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "key": "meeting:ff-abc123", "drawer": "meetings", "template": null,
+      "title": "Kickoff", "aliases": [], "description": "The first kickoff",
+      "fields": { "date": "2026-11-01", "attendees": ["Unknown Guest"] },
+      "topics": ["consulting"], "status": "unreviewed", "reviewed": null,
+      "tags": [], "related": ["alex@example.com"],
+      "sources": [{ "source": "fireflies", "source_id": "FF-ABC123" }],
+      "generated": null, "verified": [],
+      "body": "Kickoff for [[Widget Rollout|the rollout]] and [[Widgets Ltd#History]].\nUnicode: café, 東京.\n",
+      "created_at": "2026-11-01T15:00:00Z", "updated_at": "2026-11-01T16:00:00Z",
+      "owner": "owner@example.com",
+      "links": [
+        { "target_key": "alex@example.com", "reason": "related" },
+        { "target_key": "project:widget-rollout", "reason": "wikilink" },
+        { "target_key": "widgets.example", "reason": "wikilink" }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "key": "meeting:ff-def456", "drawer": "meetings", "template": null,
+      "title": "Kickoff", "aliases": [], "description": null,
+      "fields": { "date": "2026-11-08" },
+      "topics": [], "status": "unreviewed", "reviewed": null,
+      "tags": [], "related": [],
+      "sources": [{ "source": "fireflies", "source_id": "FF-DEF456" }],
+      "generated": null, "verified": [],
+      "body": "A second meeting with the same title.\n",
+      "created_at": "2026-11-08T15:00:00Z", "updated_at": "2026-11-08T15:00:00Z",
+      "owner": "owner@example.com",
+      "links": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "key": "project:widget-rollout", "drawer": "projects", "template": "consulting",
+      "title": "Widget Rollout", "aliases": ["Rollout"], "description": "Roll widgets out",
+      "fields": { "status": "active", "next_step": "Launch" },
+      "topics": ["consulting"], "status": "draft", "reviewed": null,
+      "tags": [], "related": [],
+      "sources": [{ "source": "claude-code", "source_id": "session-1" }],
+      "generated": { "by": "curator", "at": "2026-11-02" }, "verified": [],
+      "body": "Owner [[Alex Tester]].\n\nSecond edit.",
+      "created_at": "2026-11-02T08:00:00Z", "updated_at": "2026-11-12T09:30:00Z",
+      "owner": "owner@example.com",
+      "links": [{ "target_key": "alex@example.com", "reason": "wikilink" }]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "key": "concept:idempotent-import", "drawer": "concepts", "template": null,
+      "title": "Idempotent Import", "aliases": [], "description": "Colons: and #hashes and quotes \"here\"",
+      "fields": { "on_hold": "yes", "since": "2026-01-05T10:00:00Z" },
+      "topics": [], "status": "unreviewed", "reviewed": null,
+      "tags": ["client-work", "method"], "related": [],
+      "sources": [],
+      "generated": null, "verified": [],
+      "body": "A second run changes nothing. See [[Widget Rollout]].\n\n",
+      "created_at": "2026-10-01T00:00:00Z", "updated_at": "2026-10-15T00:00:00Z",
+      "owner": "owner@example.com",
+      "links": [
+        { "target_key": "client-work", "reason": "tag" },
+        { "target_key": "method", "reason": "tag" },
+        { "target_key": "project:widget-rollout", "reason": "wikilink" }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "key": "concept:idempotent-import", "drawer": "concepts", "template": null,
+      "title": "Idempotent Import", "aliases": [], "description": "The reader's own page",
+      "fields": {}, "topics": [], "status": "unreviewed", "reviewed": null,
+      "tags": [], "related": [], "sources": [], "generated": null, "verified": [],
+      "body": "Reader's notes on the same idea.\n",
+      "created_at": "2026-10-05T00:00:00Z", "updated_at": "2026-10-05T00:00:00Z",
+      "owner": "reader@example.com",
+      "links": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "key": "alex@example.com", "drawer": "people", "template": null,
+      "title": "Alex Tester", "aliases": [], "description": null,
+      "fields": {}, "topics": [], "status": "unreviewed", "reviewed": null,
+      "tags": [], "related": [], "sources": [], "generated": null, "verified": [],
+      "body": "The reader's page on Alex.\n",
+      "created_at": "2026-10-06T00:00:00Z", "updated_at": "2026-10-06T00:00:00Z",
+      "owner": "reader@example.com",
+      "links": []
+    }
+  ]
+}

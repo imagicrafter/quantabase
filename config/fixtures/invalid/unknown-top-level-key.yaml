@@ -1,0 +1,8 @@
+# A typo at the top level.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+sorces: {}

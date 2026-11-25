@@ -1,0 +1,9 @@
+# A tab the Knowledge menu does not have.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  menus: { knowledge: [overview, charts] }

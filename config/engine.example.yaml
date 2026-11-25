@@ -1,0 +1,78 @@
+# .kb-engine/engine.yaml — the one config file for an Engine.
+#
+# It lives in your private knowledge repo, is checked by two validators that
+# must agree (engine/src/config/engine-config.ts and
+# scripts/knowledge/engine_config.py), and is applied to the database. The
+# service and the pullers read it from there (workspace.engine_settings).
+#
+# Field reference: config/schema.json (generated; do not edit by hand).
+
+version: 1
+
+engine:
+  id: acme
+  name: "Acme's Knowledge Base Engine"
+  owner:
+    email: owner@example.com          # becomes the first administrator
+    names: ["Pat Owner"]              # how the owner appears in meeting notes
+    emails: [owner@example.com]       # every address that is the owner
+
+# Topics ("domains") decide who can see what. `unclassified` always exists, is
+# locked to the owner, and may not be declared here.
+domains:
+  - { id: consulting, label: Consulting }
+  - { id: properties, label: Rental Properties }
+  - { id: private, label: Private, sensitive: true }
+
+# A tag is <prefix><topic id>, for example kx/consulting.
+tagging:
+  prefix: "kx/"
+  frontmatter_key: domains
+
+sources:
+  wiki:
+    enabled: true
+    repo: acme/knowledge
+    default_domain: null              # null = untagged pages stay unclassified
+  drive:
+    enabled: true
+    default_domain: null
+    include_mime: [docs, sheets, slides]   # add pdf to index PDFs by name and place
+    trust_tags_from: owner            # owner = tags count only on items this account owns
+  fireflies:
+    enabled: true
+    default_domain: null
+    channels: {}                      # channel name -> topic id
+    write_meeting_pages: true
+    # Meetings someone else recorded and shared with the owner. Off by default.
+    # trusted_domains: the only organizer email domains accepted (none by default).
+    shared_meetings: { enabled: false, trusted_domains: [] }
+  # Email is off unless you turn it on. When on, a thread is indexed only if
+  # it carries a label named <prefix><topic id>; mail with no such label is
+  # never read. Its owner always sees it; others only once it is approved.
+  gmail:
+    enabled: false
+    prefix: null                      # null = use tagging.prefix
+    # Whose mailbox is read and who owns its threads. Empty = the Engine
+    # owner's own mailbox. One mailbox for now, for example:
+    #   mailboxes: [{ email: owner@example.com, owner_email: owner@example.com }]
+    mailboxes: []
+
+models:
+  distill: { backend: do, id: openai-gpt-oss-120b }
+
+# Optional. Without it the status page shows Knowledge and Security only,
+# built from the sources above.
+dashboard:
+  title: "Acme's Knowledge Base Engine"
+  menus:
+    knowledge: [overview, sources, areas, review]
+    tools: [connected]
+    security: [layers, people, systems]
+  ask_claude_buttons: true
+  connect:
+    connector_url: https://engine.example.com/mcp
+    login: email-code
+
+support:
+  care_plan: { enabled: false }

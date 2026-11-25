@@ -1,0 +1,11 @@
+# `warn_over` is a whole number.
+version: 1
+engine:
+  id: acme
+  name: Acme's Knowledge Base Engine
+  owner:
+    email: owner@example.com
+dashboard:
+  knowledge:
+    sources: []
+    review_queue: { label: Review, sensor: "review_items:undecided", warn_over: many }
