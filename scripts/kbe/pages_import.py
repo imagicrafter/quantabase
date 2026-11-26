@@ -26,9 +26,10 @@ Mapping, per file:
               link; the rest are looked up by the database (0074)
   body        everything after the frontmatter, unchanged ([[links]] are
               resolved to keys by the database when each page is saved);
-              over 200,000 characters it is shortened, with a note on top
+              over the database's 200,000 characters it is split into
+              linked parts, never shortened (pages_import_split.py)
 Two files for one meeting id become one page: the newer, with the other as a
-note section. An optional map (pages_import_map.py) refiles files, merges two
+note section (split afterwards, if that makes it too long). An optional map (pages_import_map.py) refiles files, merges two
 files into one page and adds pages with no file. Other frontmatter keys are
 dropped and counted in the report. Topics are only those given with --topic:
 nothing is shared by an import unless asked.
@@ -44,13 +45,13 @@ from typing import Any, Iterable, Mapping
 
 from .errors import KbeError
 from . import pages_import_map as import_map
-from .pages_import_combine import MAX_BODY, merge_pages, resolve_attendees, stamp, truncate
+from .pages_import_combine import MAX_BODY, merge_pages, resolve_attendees, stamp
+from .pages_import_split import MAX_TITLE, KeyFor, split_pages
 
 TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "engine" / "templates" / "entities"
 SKIP_DIRS = frozenset({"templates", "sources", "excalidraw", "diagrams", "attachments", "assets"})
 SKIP_FILES = frozenset({"index.md", "log.md", "readme.md", "claude.md", "agents.md"})
 MAX_DESCRIPTION = 500
-MAX_TITLE = 300
 STATUSES = ("draft", "unreviewed", "current")
 
 # Frontmatter `type` (or folder name) -> drawer id.
@@ -102,6 +103,7 @@ class Plan:
     map_lines: list[str] = field(default_factory=list)
     combined: list[tuple[str, str, str]] = field(default_factory=list)
     attendees: list[tuple[str, str, str]] = field(default_factory=list)
+    splits: list[tuple[str, int]] = field(default_factory=list)
 
     def by_drawer(self) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -245,6 +247,18 @@ def derive_key(drawer: Drawer, fm: Mapping[str, Any], title: str) -> tuple[str, 
         stem = f"{when}-{slug(title)}" if when else slug(title)
         return f"{drawer.prefix or 'meeting'}:{stem}", "no meeting id: key from date and title"
     return f"{drawer.prefix or drawer.id.rstrip('s')}:{slug(title)}", None
+
+
+def part_key_for(drawers: Mapping[str, Drawer]) -> KeyFor:
+    """The key of a page's part 2..n, by its drawer's rule for a page with
+    only that title (and, for a meeting, its date): never part 1's meeting
+    id, address or domain, so a part can never become part 1."""
+    def key_for(page: Mapping[str, Any], title: str) -> str:
+        drawer = drawers[page["drawer"]]
+        when = _text((page.get("fields") or {}).get("date")) or _text(page.get("created"))
+        fm = {"date": when} if drawer.key_kind == "source_id" and when else {}
+        return derive_key(drawer, fm, title)[0]
+    return key_for
 
 
 HEADER_KEYS = frozenset({
@@ -534,5 +548,17 @@ def plan(folder: Path, *, topics: Iterable[str] = (), skip: Iterable[str] = (),
             result.skipped.append((f"(map) {item.name}", f"same key {item.key} as {pages[item.key].path}"))
             continue
         pages = {**pages, item.key: _stub(item, chosen_topics)}
-    result.pages, result.attendees = resolve_attendees([truncate(p, MAX_BODY) for p in pages.values()])
+    split, result.splits = split_pages(pages.values(), part_key_for(known), limit=MAX_BODY)
+    planned, result.attendees = resolve_attendees(split)
+    result.pages = mark_key_only(planned, known)
     return result
+
+
+def mark_key_only(planned: Iterable[Planned], known: Mapping[str, Drawer]) -> list[Planned]:
+    """Pages whose drawer is keyed by a source id (a meeting) are sent with
+    `key_only: true`: the database (migration 0079) then looks for that key
+    alone, never another page with the same name. A weekly meeting keeps its
+    title but each one has its own id or date, and is its own page."""
+    return [replace(p, page={**p.page, "key_only": True})
+            if known[p.page["drawer"]].key_kind == "source_id" else p
+            for p in planned]

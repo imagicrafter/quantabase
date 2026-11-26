@@ -9,6 +9,21 @@ the version you run, the latest on `stable` and what changed in between. An
 entry says so when updating needs more than the steps in
 [`docs/operations.md`](docs/operations.md#updates).
 
+## 1.0.0-rc.2 - 2026-11-26
+
+**Updating needs one extra step:** after Force Rebuild and Deploy, open the
+Database screen and apply the pending update (migration 0079).
+
+- **Long pages are kept whole on import.** `kbe pages import` no longer cuts
+  a page over the 200,000-character limit. It splits it into linked parts
+  ("<title> (part 2)", ...), each pointing to the next and the previous. The
+  dry run says "Split into linked parts, nothing cut".
+- **Recurring meetings are no longer dropped on import.** Meetings with the
+  same name on different dates used to match each other, so only the first
+  was kept. Meetings now match only on their own key (date and title).
+  Re-run the import after the update to add the missing ones; pages already
+  there are left alone.
+
 ## 1.0.0-rc.1 - 2026-11-24
 
 The first public release.

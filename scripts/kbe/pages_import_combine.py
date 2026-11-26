@@ -3,7 +3,6 @@
     combine      two pages become one: the kept page's body and the other's
                  under its own heading (a --map merge_into, or two files for
                  one meeting id)
-    truncate     a body over the limit keeps its start, with a note on top
     attendees    a meeting's attendees that match a person page in the same
                  import become `related` links; the rest go to the database,
                  which looks for the owner's existing person pages and keeps
@@ -18,6 +17,8 @@ import re
 from dataclasses import replace
 from typing import Any, Iterable, Mapping
 
+# The database refuses a longer page body (page_write, migration 0051). A body
+# over it is split into linked parts (pages_import_split.py), never cut.
 MAX_BODY = 200_000
 
 
@@ -78,18 +79,6 @@ def merge_pages(keep, other, *, as_note: bool):
         {"attendees": page["attendees"]} if page["attendees"] else {})
     return replace(keep, page=page, notes=keep.notes + other.notes,
                    merged=keep.merged + (other.path,) + other.merged)
-
-
-def truncate(planned, limit: int = MAX_BODY):
-    """The page with its body cut to `limit` characters and a note on top."""
-    body = planned.page["body"]
-    if len(body) <= limit:
-        return planned
-    head = (f"> **Imported shortened.** The original was {len(body):,} characters; "
-            f"only the start is kept here. The full text is `{planned.path}` in the old wiki.\n\n")
-    kept = body[: limit - len(head)]
-    note = f"body shortened from {len(body):,} to {limit:,} characters"
-    return replace(planned, page={**planned.page, "body": head + kept}, notes=planned.notes + (note,))
 
 
 def _people_index(pages: Iterable[Any]) -> tuple[dict[str, str], dict[str, set[str]]]:

@@ -15,7 +15,9 @@ the header the backup wrote as the page itself, so a page comes back as it was:
   related     [[Title]] links turned back into the keys of the pages they name
   sources     as written (objects stay objects)
   status, template, generated, verified, aliases, tags, description: as written
-  body        exactly: the one newline the backup adds at the end is taken off
+  body        exactly: the one newline the backup adds at the end is taken off,
+              and the backup's file name in a split part's "Continued from /
+              in [[...]]" line is turned back into the part's key
   dates       created / updated (the backup keeps the day only)
   topics      only with --keep-topics (each page's own) or --topic; without
               either the pages are the owner's alone
@@ -39,8 +41,10 @@ from typing import Any, Iterable, Mapping
 from .errors import KbeError
 from .pages_import import (
     STATUSES, Drawer, Plan, Planned, _dates, _link_target, _text, load_drawers, markdown_files,
+    part_key_for,
 )
-from .pages_import_combine import MAX_BODY, truncate
+from .pages_import_combine import MAX_BODY
+from .pages_import_split import relink, split_pages
 
 # The header lines render.ts writes (its HEADER_KEYS); everything else is a field.
 HEADER = frozenset({
@@ -147,6 +151,13 @@ def _related(fm: Mapping[str, Any], owner: str, names: Mapping[str, list[tuple[s
     return out
 
 
+def _owners_key(names: Mapping[str, list[tuple[str, str]]], owner: str, name: str) -> str | None:
+    """The key of the page a backup file name stands for, the owner's first."""
+    found = names.get(name.lower(), [])
+    mine = [k for o, k in found if o == owner]
+    return (mine or [k for _, k in found] or [None])[0]
+
+
 def _page(rel: str, fm: Mapping[str, Any], body: str, drawer: Drawer, owner: str,
           names: Mapping[str, list[tuple[str, str]]], topics: list[str] | None) -> Planned:
     key = _text(fm.get("key")).lower()
@@ -168,7 +179,7 @@ def _page(rel: str, fm: Mapping[str, Any], body: str, drawer: Drawer, owner: str
         if isinstance(fm.get("verified"), list) else [],
         "fields": _fields(fm, key, sources),
         "topics": sorted({t.lower() for t in _strings(fm.get("topics"))}) if topics is None else list(topics),
-        "body": body,
+        "body": relink(body, lambda name: _owners_key(names, owner, name)),
         "restore": True,
         **({"template": _text(fm.get("template"))} if _text(fm.get("template")) else {}),
         **dates,
@@ -224,5 +235,5 @@ def plan_backup(folder: Path, *, owner: str, topics: Iterable[str] = (), keep_to
                 _count(result, "reviewed")
             if page_topics is not None and _strings(fm.get("topics")):
                 _count(result, "topics")
-    result.pages = [truncate(p, MAX_BODY) for p in by_key.values()]
+    result.pages, result.splits = split_pages(by_key.values(), part_key_for(known), limit=MAX_BODY)
     return result

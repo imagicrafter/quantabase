@@ -10,7 +10,6 @@ import pytest
 from kbe import cli, pages
 from kbe.errors import KbeError
 from kbe.pages_import import MAX_BODY, plan
-from kbe.pages_import_combine import truncate
 from kbe.tests.helpers import make_context
 
 
@@ -112,9 +111,10 @@ class Store:
     def call(self, function, args=None):
         self.calls.append(args["p_page"])
         key = args["p_page"]["key"]
+        flag = {"key_only": bool(args["p_page"].get("key_only"))}  # a 0079 database
         if key in self.matched:
-            return {"status": "matched", "key": self.matched[key], "how": "name"}
-        return {"status": "created", "key": key}
+            return {"status": "matched", "key": self.matched[key], "how": "name", **flag}
+        return {"status": "created", "key": key, **flag}
 
 
 def test_apply_saves_people_first_and_follows_matched_pages(meeting_vault, tmp_path):
@@ -155,16 +155,13 @@ def test_a_repeated_key_that_is_not_a_meeting_is_still_skipped(tmp_path):
     assert plan(root).skipped == [("people/B.md", "same key a@x.com as people/A.md")]
 
 
-def test_long_files_are_shortened_with_a_note(tmp_path):
+def test_long_files_are_split_not_shortened(tmp_path):
     root = tmp_path / "wiki"
     write(root, "concepts/Big.md", "---\ntitle: Big\n---\n" + "word " * 50_000)
-    [page] = plan(root).pages
-    body = page.page["body"]
-    assert len(body) == MAX_BODY
-    assert body.startswith("> **Imported shortened.** The original was 250,000 characters")
-    assert "`concepts/Big.md`" in body.splitlines()[0]
-    assert "body shortened from 250,000 to 200,000 characters" in page.notes
-    assert truncate(page) is page
+    one, two = plan(root).pages
+    assert one.page["key"] == "concept:big" and two.page["key"] == "concept:big-part-2"
+    assert all(len(p.page["body"]) <= MAX_BODY for p in (one, two))
+    assert not any("shortened" in n for p in (one, two) for n in p.notes)
 
 
 # ── frontmatter carried over ─────────────────────────────────────────────────

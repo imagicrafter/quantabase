@@ -566,8 +566,9 @@ What a restore does not bring back, because the backup does not hold it:
 ## Importing an existing wiki
 
 A one-time move of an OKF or Obsidian wiki (a folder of Markdown files with
-frontmatter) into pages, for one person. Apply migration 0074 first (from
-the Database screen): it lets the import keep dates and link attendees.
+frontmatter) into pages, for one person. Apply migrations 0074 and 0079
+first (from the Database screen): 0074 lets the import keep dates and link
+attendees; 0079 keeps every meeting of a recurring series (see below).
 
 ```
 python -m kbe pages import ~/path/to/wiki --owner person@example.com
@@ -578,7 +579,7 @@ python -m kbe pages import ~/path/to/wiki --owner person@example.com --map impor
 The first command only reads the folder and reports: how many pages per
 drawer, the key each gets, which keys fell back (a person page with no
 `email`, an organisation with no `domain` or `website`, a meeting with no id),
-which files are skipped, merged or shortened and why, how meeting attendees
+which files are skipped, merged or split into parts and why, how meeting attendees
 link, the `--map` entries, how many pages keep their dates, and which
 frontmatter keys are not carried over. `--json` lists everything. `--apply`
 (after a yes; `--yes` to skip the question) saves them over the direct
@@ -605,8 +606,19 @@ database connection (`KBE_DATABASE_URL`).
 - **Two files for one meeting id** become one page: the newer file (by
   `updated`, else `created`, else `date`) is the page and the other is added
   under `## Note: <its title>`. Any other repeated key is skipped and listed.
-- **Long files.** A body over 200,000 characters is imported shortened to
-  that limit, with a note at the top naming the original file.
+- **Long files are split, never shortened.** The database holds at most
+  200,000 characters in one page body. A longer body (a long meeting
+  transcript, or two files for one meeting combined) becomes linked parts of
+  at most 190,000 characters each, cut at line ends. Part 1 keeps the
+  page's key, title and fields. Parts 2, 3, ... are "<title> (part 2)" and
+  so on, with a key of their own by the drawer's rule (a meeting part's key
+  is its date and title, never the meeting id, so it cannot merge into part
+  1), and the same dates, tags and topics. Each part ends with
+  `> Continued in [[key|next title]]` and the next starts with
+  `> Continued from [[key|previous title]]`, so they link like any other
+  page. Joined without those lines, the parts are the original text exactly.
+  The dry run lists each one (`notes/Long call.md -> 3 parts`). A backup
+  of split parts restores to the same parts (`--from-backup`).
 - **Other frontmatter.** A drawer's own fields are kept (from any entity
   template; `company` / `organization` / `org` fill `organisation`).
   `summary` fills an empty `description`, and a meeting's `fireflies_id` is
@@ -615,6 +627,22 @@ database connection (`KBE_DATABASE_URL`).
 - A key the person already holds is left alone, so a second run adds only
   what is new. Nothing is overwritten. People and organisations are saved
   first, so the meetings that follow can link to them.
+- **Matching an existing page.** A page whose key the person does not
+  hold yet is checked against their other pages in the same drawer: by a
+  known address or domain, then by name or alias. A match is reported
+  (`matched <file>: <key> is your page <other key> (name)`) and nothing is
+  made. **Meetings are never matched by name.** In any drawer whose
+  template key rule is `source_id` (meetings), a page is the same page only
+  under the same key: the meeting id, or for a meeting with no id the same
+  date-and-title key. A weekly "Pat / Sam sync-up" with a new meeting id
+  each week, or `meeting:2025-06-10-x` and `meeting:2025-06-11-x`, are
+  separate pages. The import sends these pages with `key_only: true` and
+  stops before filing a meeting if the database lacks migration 0079.
+- **Re-run after 0079.** An import made before 0079 may have matched a
+  recurring meeting to an earlier one by title and dropped it. Apply 0079,
+  then run the same import again with `--apply`: the dropped meetings are
+  created and every page already there is reported "already there" and
+  left alone.
 - Pages get only the topics named with `--topic`, and only topics the person
   holds. Without `--topic` they are the person's alone.
 - `index.md`, `log.md`, `README.md`, dot-folders, `templates/` and `sources/`

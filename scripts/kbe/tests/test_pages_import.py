@@ -196,11 +196,12 @@ class Store:
     def call(self, function, args=None):
         self.calls.append((function, args))
         key = args["p_page"]["key"]
+        flag = {"key_only": bool(args["p_page"].get("key_only"))}  # a 0079 database
         if key in self.refuse:
             raise KbeError("The database refused workspace.page_import:\nERROR:  a page can only be filed under topics you hold")
         if key in self.matched:
-            return {"status": "matched", "key": self.matched[key], "how": "name", "proposed": key}
-        return {"status": "exists" if key in self.existing else "created", "key": key}
+            return {"status": "matched", "key": self.matched[key], "how": "name", "proposed": key, **flag}
+        return {"status": "exists" if key in self.existing else "created", "key": key, **flag}
 
 
 def test_apply_saves_each_page_and_counts(vault, tmp_path):

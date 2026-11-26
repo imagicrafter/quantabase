@@ -1,6 +1,6 @@
 {
   "name": "kb-engine",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "private": true,
   "description": "The Engine service: a private knowledge index served to Claude over MCP, filtered by who is asking.",
   "license": "MIT",

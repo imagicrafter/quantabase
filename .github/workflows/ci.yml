@@ -20,17 +20,43 @@ jobs:
       run:
         working-directory: engine
     steps:
+      # fetch-depth 2: a PR checks out a merge commit; HEAD^1 is the base.
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+        with:
+          fetch-depth: 2
+      # A PR that changes only docs/ or top-level *.md files skips the
+      # engine build and tests (they never read those files). The pipeline
+      # and secrets jobs still run: they check the docs. Pushes to main and
+      # stable always run everything.
+      - id: scope
+        working-directory: .
+        run: |
+          code=true
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            changed=$(git diff --name-only HEAD^1 HEAD)
+            other=$(printf '%s\n' "$changed" | grep -vE '^docs/|^[^/]+\.md$' || true)
+            if [ -n "$changed" ] && [ -z "$other" ]; then
+              code=false
+              echo "Docs-only PR: skipping the engine build and tests."
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+      - if: steps.scope.outputs.code == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: engine/package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
+      - if: steps.scope.outputs.code == 'true'
+        run: npm ci
+      - if: steps.scope.outputs.code == 'true'
+        run: npm run typecheck
+      - if: steps.scope.outputs.code == 'true'
+        run: npm run lint
+      - if: steps.scope.outputs.code == 'true'
+        run: npm test
+      - if: steps.scope.outputs.code == 'true'
+        run: npm run build
 
   pipeline:
     runs-on: ubuntu-latest

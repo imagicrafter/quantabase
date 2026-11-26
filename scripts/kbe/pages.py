@@ -12,6 +12,8 @@ saved through `page_import` over the direct database connection
 so a second run only adds what is new. A page that matches one the person
 already has (a known address or domain, or the same name in the same drawer:
 the curator's matching, migration 0067) is reported as matched and not made.
+A meeting (any drawer whose key rule is source_id) is matched by its key only
+(migration 0079): two meetings with the same title are two pages.
 People and organisations are saved first, so a meeting's attendees can link
 to them; a link to a page that matched an existing one follows it to that page.
 
@@ -46,6 +48,7 @@ def _store(ctx: Context) -> config_store.ConfigStore:
 
 
 RESTORE_MIGRATION = "0078"
+KEY_ONLY_MIGRATION = "0079"
 
 
 def _topics_line(topics: list[str], keep_topics: bool) -> str:
@@ -85,6 +88,11 @@ def report(result: Plan, owner: str, topics: list[str], keep_topics: bool = Fals
         lines += [f"  {path} -> {into} ({why})" for path, into, why in result.combined[:_SHOW]]
         if len(result.combined) > _SHOW:
             lines.append(f"  ... and {len(result.combined) - _SHOW} more (--json lists all)")
+    if result.splits:
+        lines.append(f"Split into linked parts, nothing cut ({len(result.splits)}):")
+        lines += [f"  {path} -> {count} parts" for path, count in result.splits[:_SHOW]]
+        if len(result.splits) > _SHOW:
+            lines.append(f"  ... and {len(result.splits) - _SHOW} more (--json lists all)")
     if result.attendees:
         linked = sum(1 for _, _, key in result.attendees if key)
         lines.append(f"Meeting attendees: {linked} link to a person page in this import; "
@@ -105,6 +113,7 @@ def _as_json(result: Plan) -> str:
         "combined": [{"path": path, "into": into, "reason": why} for path, into, why in result.combined],
         "attendees": [{"path": path, "attendee": name, "links_to": key or None}
                       for path, name, key in result.attendees],
+        "splits": [{"path": path, "parts": count} for path, count in result.splits],
         "map": result.map_lines,
         "dropped_frontmatter_keys": result.dropped_keys,
     }, indent=2, ensure_ascii=False)
@@ -122,7 +131,9 @@ def apply(store: config_store.ConfigStore, result: Plan, owner: str, ctx: Contex
           restore: bool = False) -> dict[str, int]:
     """Save every planned page. A page the database refuses is reported and skipped.
     A restore stops at once if the database does not know restore mode (before
-    migration 0078 it would match pages by name and drop some)."""
+    migration 0078 it would match pages by name and drop some). So does a
+    key-only page (a meeting) if the database does not know key-only mode
+    (before 0079 a weekly meeting was matched to an earlier one by title)."""
     counts = {"created": 0, "exists": 0, "matched": 0, "refused": 0}
     moved: dict[str, str] = {}
     for planned in _order(result):
@@ -138,6 +149,10 @@ def apply(store: config_store.ConfigStore, result: Plan, owner: str, ctx: Contex
             raise KbeError(f"This database cannot restore a backup yet: apply migration "
                            f"{RESTORE_MIGRATION} (Database screen or `kbe db migrate`), then run "
                            "the restore again. Pages already filed are kept.")
+        if page.get("key_only") and not (isinstance(answer, dict) and "key_only" in answer):
+            raise KbeError(f"This database would file a meeting on another meeting with the same "
+                           f"title: apply migration {KEY_ONLY_MIGRATION} (Database screen or "
+                           "`kbe db migrate`), then run the import again. Pages already filed are kept.")
         status = answer.get("status") if isinstance(answer, dict) else None
         if status == "matched":
             counts["matched"] += 1
