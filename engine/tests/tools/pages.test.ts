@@ -59,6 +59,7 @@ describe("page tools are listed", () => {
         "list_entities",
         "record_source_item",
         "report_ingest_candidates",
+        "report_mail_contacts",
         "related",
         "save_page",
         "update_page",

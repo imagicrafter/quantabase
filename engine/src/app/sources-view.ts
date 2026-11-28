@@ -35,6 +35,14 @@ export function accountsCard(accounts: readonly Row[]): string {
 }
 
 /** Claude Code sessions: sent by hand from Claude Code, so no account and no rules here. */
+/** The plain-words intro at the top of the Sources screen. */
+export function sourcesIntroCard(): string {
+  return card(`<h2>How sources work</h2>
+<p>Rules decide what your library keeps. Nothing is kept unless an include rule lets it in. An exclude rule keeps things out.</p>
+<p>Rules replaced the old source tags: instead of tagging a source, you add a rule that says which mail or meetings to keep and which topic they go under (or private, only you).</p>
+<p>For Gmail, the easy way to start is to let Claude suggest the rules: use the prompt for your account below.</p>`);
+}
+
 export function sessionsCard(summary: Row | null): string {
   if (!summary) {
     return card('<h2>Claude Code sessions</h2><p>Your Engine\'s database needs an update before it can take Claude Code sessions. An administrator can <a href="/setup/database">update the database</a>.</p>');

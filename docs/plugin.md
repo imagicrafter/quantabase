@@ -1,12 +1,13 @@
 # The Claude plugin
 
-The plugin is how a person's own Claude feeds their Engine. It holds three
+The plugin is how a person's own Claude feeds their Engine. It holds four
 skills and the Engine connector:
 
 | Part | What it does |
 |---|---|
 | `ingest` skill | One run copies new items from ONE source account (Gmail or Fireflies, by address) or ONE source (Drive, Calendar) into the Engine, unchanged, with `record_source_item`. No summaries, no judgement. The Engine keeps only what the person's own inclusion rules include ([source-rules.md](source-rules.md)). Reports `listed N, saved N, left out N`. |
 | `send-session` skill | At the end of a Claude Code session, Claude writes a short session note (labelled items with exact quotes and the pages they concern), shows it, and on a yes sends it to the Engine in one call. Hints, not page edits. See [Sending a Claude Code session](#sending-a-claude-code-session). |
+| `suggest-rules` skill | Reads only the header metadata of one Gmail account's last 90 days (who the person sent mail to, who writes to them, which mail they answered), counts it on their machine, asks them a few questions about who to keep, and sends the Engine counts per address and per domain with their picks. The Sources screen shows the picks ticked; the person saves the rules there. See [Suggesting Gmail rules](#suggesting-gmail-rules). |
 | `schedule-setup` skill | Walks the person through tool permissions, a first run by hand, and one scheduled task per source on the smallest model. |
 | Engine connector (`.mcp.json`) | Points at the person's Engine (`https://<host>/mcp`), set once at install. |
 
@@ -15,7 +16,8 @@ marketplace file is [`../.claude-plugin/marketplace.json`](../.claude-plugin/mar
 so this repository can be added as a plugin marketplace (named
 `quantabase`). Upgrading from the plugin's earlier name, `kb-engine`:
 uninstall `kb-engine`, then install `qb-engine@quantabase`. Commands are now
-`/qb-engine:ingest`, `/qb-engine:schedule-setup` and `/qb-engine:send-session`,
+`/qb-engine:ingest`, `/qb-engine:schedule-setup`, `/qb-engine:send-session`
+and (from 0.5.0) `/qb-engine:suggest-rules`,
 and scheduled tasks made before 0.4.0 that name `kb-ingest` should be made
 again with `/qb-engine:schedule-setup`.
 
@@ -60,6 +62,48 @@ the Engine's write tools only store. Curation runs inside the service.
 are now the optional "server mode" for an Engine that should read its
 sources itself with its own Google and Fireflies credentials. The plugin is
 the default path; an Engine can use either or both.
+
+## Suggesting Gmail rules
+
+Writing Gmail inclusion rules ([source-rules.md](source-rules.md)) used to
+mean digging through the mailbox to work out who matters. Instead, open
+Sources in the Engine, copy the prompt next to the Gmail account, and paste
+it into Claude (with the Gmail connector for that account attached). The
+prompt starts with the command, so in Claude Code you can also type it:
+
+```
+/qb-engine:suggest-rules you@example.com
+```
+
+1. Claude searches the account read-only: up to 250 messages the person
+   **sent** in the last 90 days (`in:sent newer_than:90d`, the strongest
+   signal of a real contact) and up to 250 they received, leaving out
+   Gmail's Promotions, Social, Updates and Forums.
+2. It keeps **header metadata only** (from, to, cc, date, label ids, thread
+   id) in a temp file. Never a subject, snippet or body.
+3. The bundled script (`skills/suggest-rules/scripts/mail_contacts.py`,
+   Python 3.9 or newer, standard library only, no network) counts, per
+   address and per domain: `sent_to`, `received_from`, `threads`, `replied`
+   (threads they wrote in that the person answered) and `last_seen`. It
+   drops the person's own addresses, bulk senders (noreply, notifications,
+   mailer-daemon and the like) and the bulk categories, and keeps free-mail
+   domains (gmail.com, outlook.com and the like) as **people only**, never
+   as a whole domain.
+4. Claude asks up to four short questions, showing addresses, domains and
+   counts only: which domains to keep, which people, anyone missing, and a
+   final check. `mail_contacts.py choose --pick ...` marks the picks
+   (`chosen: true`, the rest `false`).
+5. Claude sends the counts and picks with `report_mail_contacts` (one call;
+   a new report replaces the account's last one), removes the temp file and
+   replies with one line of counts.
+
+Nothing in the report is a name, subject, text or message id: the Engine's
+schema refuses any other key. The Engine never holds a mailbox token; the
+counts come from the person's own Claude. Claude never makes a rule: open
+the Gmail account on the Sources screen, where the picks are ticked, and
+save them there ([source-rules.md](source-rules.md#suggested-from-your-mail)).
+Run it again any time; the screen shows the suggestions' age once they are
+more than 30 days old.
 
 ## Sending a Claude Code session
 
@@ -134,7 +178,7 @@ The Fact-checker checks every new sentence against the note's quotes (not
 its summary lines) and cuts what they do not back. With the Publisher's
 **Ask me before saving** on, every change waits for your yes on To do.
 Notes are yours alone unless an administrator files the project under a
-topic. The Subscriptions page (`/app/sources`) shows how many sessions you
+topic. The Sources page (`/app/sources`) shows how many sessions you
 have sent.
 
 Because the note needs no log file, the same note can later come from a

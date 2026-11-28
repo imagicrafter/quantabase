@@ -10,7 +10,7 @@ import { MARK_ADMIN, MARK_TREE, MARK_TREE_END, MARK_USER } from "./chrome.js";
  * stylesheet. Addresses are written so the edge's email obfuscation cannot
  * match them (email-guard.ts); the email_off markers stay as a second line.
  * The sidebar is the same everywhere: Home, the Library (Reading room, Find
- * a page, To do, Subscriptions), and for administrators and on /setup the
+ * a page, To do, Sources), and for administrators and on /setup the
  * Engine (Pipeline, Ledger, Staff & settings > the setup screens).
  */
 
@@ -48,7 +48,7 @@ export const APP_NAV: readonly NavItem[] = [
   { href: "/app/knowledge", label: "Reading room", icon: "book", group: "Library" },
   { href: "/app/pages", label: "Find a page", icon: "search", group: "Library" },
   { href: "/app/todo", label: "To do", icon: "clipboard", group: "Library" },
-  { href: "/app/sources", label: "Subscriptions", icon: "rss", group: "Library" },
+  { href: "/app/sources", label: "Sources", icon: "rss", group: "Library" },
 ];
 
 /** Screens that belong to a menu item without being under its address. */
@@ -69,7 +69,7 @@ const HELPERS: Readonly<Record<string, string>> = {
   "/app/reviews": "Changes the curator will not make without your yes.",
   "/app/flagged": "Mail that looked like it was giving orders. Nothing in it was acted on.",
   "/app/duplicates": "Pages that may be the same thing. Merge them or keep them apart.",
-  "/app/sources": "Subscriptions: which mail, files, meetings and Claude Code sessions the library reads for you.",
+  "/app/sources": "Sources: your rules for which mail, meetings and Claude Code sessions the library keeps.",
   "/setup": "Staff and settings: who can sign in and how the Engine is set up.",
   "/setup/people": "Who can read the library, and which topics each person sees.",
   "/setup/model": "The key the curator uses to reach its AI models. It is stored, never shown.",

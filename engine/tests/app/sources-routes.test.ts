@@ -101,7 +101,8 @@ describe("Sources: the rule list", () => {
     expect(html).toContain('value="topic:clients"');
     expect(html).toContain('value="private"');
     expect(shown(html)).toContain("Suggested excludes");
-    expect(html).not.toMatch(/<script/i);
+    // The one script is the same-origin copy-button helper; never an inline one.
+    expect(html.replace('<script src="/app/assets/copy.js" defer></script>', "")).not.toMatch(/<script/i);
   });
 
   it("lays out the rule builder on the left and the ordered rules on the right", async () => {

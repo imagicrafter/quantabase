@@ -59,6 +59,12 @@ sources --> raw captures --> documents ----------------> approved documents
 These are the server-mode sources. The plugin also hands items over with
 `record_source_item` (Gmail, Drive, Fireflies, Calendar on a schedule, and
 Claude Code session notes by hand; see 2.6 and [plugin.md](plugin.md)).
+What the plugin hands over is kept only if one of the person's own rules
+includes it. Each person sets their rules on the **Sources** screen
+(`/app/sources`, called Subscriptions before; rules replaced the old source
+tags). For Gmail the screen gives a prompt to paste into Claude that
+suggests the rules from who the person mails, with their picks ticked
+([source-rules.md](source-rules.md#suggested-from-your-mail)).
 
 A source is on when `enabled: true` is set for it in the config.
 `python -m kbe deploy render --server-mode` writes one scheduled job per enabled source (server mode; without it the app is the service alone, see `docs/operations.md`, "Server mode").
@@ -249,6 +255,7 @@ For everyone:
 | `record_source_item` | `source` (`gmail`, `fireflies`, `drive`, `calendar`, `claude-code`), `source_id`, `body`; for Gmail and Fireflies `account` and `provider`; optional `title`, `cursor`, `metadata`, `tags` (Drive folders; the project for `claude-code`); for `claude-code` a `note` (the session note) instead of `body` | Stores one raw item as yours, untrusted, versioned by id and text hash, if your inclusion rules for that account include it ([source-rules.md](source-rules.md)); the Engine sets the topic. `topics` and `owner` are ignored. Otherwise `not_included` and nothing is stored |
 | `get_ingest_plan` | `source` (`gmail`, `drive`, `fireflies`, `calendar`); `account` for Gmail and Fireflies | Your cursor for that source account, `since`, `max_items`, and how to fill `record_source_item`; for Gmail and Fireflies your rules and a query narrowed by them. Stores no source text. Used by the plugin's `ingest` skill ([plugin.md](plugin.md)) |
 | `report_ingest_candidates` | `source`, `account`; optional `labels`/`channels` (+ `_complete`), `candidates` | Reports an account's labels or channels (the rule builder's picker; a label missing from a complete list makes its rules broken) and a metadata-only sample for the dry-run. No subject or text |
+| `report_mail_contacts` | `account`, `days`, `messages_read`, `addresses`, `domains` (each row optionally `chosen`); optional `dropped` | Counts per address and per domain (sent to, received from, threads, replied, last seen) from one of your own Gmail accounts' headers, with what you picked when Claude asked (`chosen`), sent by the plugin's `suggest-rules` skill. Your Sources screen shows them as rules with your picks ticked; you save them there. Replaces your last report for that account. Counts only: a name, subject, snippet or id is refused |
 | `get_source_item` | `id` | One of your own raw items; its text only inside `content.untrusted_source_text` |
 
 Pages are owned by one person each. Writes only ever change the caller's own

@@ -4,13 +4,17 @@ import { fileURLToPath } from "node:url";
 import type { Context } from "hono";
 
 /**
- * GET /setup/assets/:file. Serves the setup page's one stylesheet from
+ * GET /setup/assets/:file. Serves the setup page's stylesheet (and the copy-button script) from
  * engine/public/setup/. The name is looked up in an allowlist and never
  * joined into a path, so there is nothing for a hostile request to traverse.
  * The file holds nothing private: it is served in setup mode with no sign-in.
  */
 
-const FILES = { "setup.css": "text/css; charset=utf-8" } as const;
+const FILES = {
+  "setup.css": "text/css; charset=utf-8",
+  // The copy buttons on the rule screen (no data, no inline script).
+  "copy.js": "text/javascript; charset=utf-8",
+} as const;
 type AssetName = keyof typeof FILES;
 
 const isAsset = (name: string): name is AssetName =>

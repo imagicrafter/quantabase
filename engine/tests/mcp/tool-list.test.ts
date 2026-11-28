@@ -37,6 +37,7 @@ const EVERYONE_TOOLS = [
   "related",
   "report_ingest_candidates",
   "report_issue",
+  "report_mail_contacts",
   "save_page",
   "search",
   "update_page",

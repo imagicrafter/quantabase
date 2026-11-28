@@ -1,6 +1,7 @@
 import type { ToolSpec } from "../../mcp/tool-helpers.js";
 import { entitySchemaTool, findEntityTool, listEntitiesTool, relatedTool } from "./read.js";
 import { getIngestPlanTool, reportCandidatesTool } from "./ingest-plan.js";
+import { reportMailContactsTool } from "./mail-contacts.js";
 import { getSourceItemTool, recordSourceItemTool } from "./source.js";
 import { savePageTool, updatePageTool } from "./write.js";
 
@@ -16,6 +17,7 @@ export const pageTools: readonly ToolSpec[] = [
   relatedTool,
   getIngestPlanTool,
   reportCandidatesTool,
+  reportMailContactsTool,
   recordSourceItemTool,
   getSourceItemTool,
   savePageTool,

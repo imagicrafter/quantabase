@@ -113,6 +113,8 @@ export type AppStore = {
   readonly recheckSource: (email: string, accountId: string) => Promise<Row>;
   readonly backfillSource: (email: string, accountId: string, since: string) => Promise<Row>;
   readonly requestSample: (email: string, accountId: string) => Promise<boolean>;
+  /** Suggested contacts from the caller's own Gmail headers (0080); fails before 0080 is applied. */
+  readonly mailContacts?: (email: string, accountId: string) => Promise<Row>;
   readonly recheckPages: (email: string) => Promise<Row[]>;
   readonly pageRecheckDone: (email: string, id: string) => Promise<boolean>;
   /** An admin change in two steps (0033): no code previews, a code applies. */
@@ -248,6 +250,7 @@ export const liveStore: AppStore = {
     obj(await rpc("app_source_backfill", { p_email: email, p_account_id: id, p_since: since })) ?? {},
   requestSample: async (email, id) =>
     (await rpc("app_source_sample_request", { p_email: email, p_account_id: id })) === true,
+  mailContacts: async (email, id) => obj(await rpc("app_source_contacts_get", { p_email: email, p_account_id: id })) ?? {},
   recheckPages: async (email) => list(await rpc("app_pages_recheck_list", { p_email: email })),
   pageRecheckDone: async (email, id) => (await rpc("app_page_recheck_done", { p_email: email, p_id: id })) === true,
   people: async (email) => list(await rpc("admin_people_list", { p_email: email })),

@@ -82,6 +82,17 @@ export function createFakeStore() {
     pinned: false,
     // The owner's own names (0077); null: the database is older than 0077.
     names: { display_name: "Owner", page_name: null, page_name_used: "Owner" } as Row | null,
+    // READER's suggested contacts from their mail (0080); null: the database is older than 0080.
+    mailContacts: {
+      reported_at: new Date(Date.now() - 2 * 86_400_000).toISOString(), days: 90, messages: 120,
+      contacts: [
+        { kind: "domain", value: "acme.com", sent_to: 9, received_from: 5, threads: 6, replied: 3, people: 3, free_mail: false, last_seen: "2026-11-20T10:00:00Z" },
+        { kind: "domain", value: "beta.example", sent_to: 4, received_from: 1, threads: 3, replied: 1, people: 2, free_mail: false, last_seen: "2026-11-19T10:00:00Z" },
+        { kind: "address", value: "carol@beta.example", sent_to: 3, received_from: 1, threads: 2, replied: 1, people: 1, free_mail: false, last_seen: "2026-11-19T10:00:00Z" },
+        { kind: "address", value: "pat@gmail.com", sent_to: 1, received_from: 6, threads: 4, replied: 0, people: 1, free_mail: true, last_seen: "2026-11-18T10:00:00Z" },
+        { kind: "domain", value: "gamma.example", sent_to: 0, received_from: 2, threads: 2, replied: 0, people: 1, free_mail: false, last_seen: null },
+      ],
+    } as Row | null,
   };
   const own = (email: string) => email === READER || email === OWNER;
   const rec = (fn: string, ...args: unknown[]) => calls.push({ fn, args });
@@ -237,6 +248,12 @@ export function createFakeStore() {
     backfillSource: async (email, id, since) => {
       rec("backfillSource", email, id, since);
       return { backfill_from: since };
+    },
+    mailContacts: async (email, id) => {
+      rec("mailContacts", email, id);
+      if (email !== READER || id !== ACCOUNT_ID) throw new AppDeniedError("not allowed");
+      if (state.mailContacts === null) throw new AppMissingFunctionError("app_source_contacts_get is missing");
+      return state.mailContacts;
     },
     requestSample: async (email, id) => {
       rec("requestSample", email, id);

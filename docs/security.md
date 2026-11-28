@@ -695,6 +695,7 @@ enforced in the database, never by the ingest run
 | Rule lists are append-only versions; every change is audited; each kept item stamps its rule and version | `source_rule_sets` (trigger), `source_rule_audit` |
 | Narrowing re-files kept items owner-only at once and flags their pages | `_src_refile` |
 | The dry-run sample is metadata only (addresses, label or channel ids, participants, date); a subject or text is refused at the tool | `report_ingest_candidates` schema, `_src_meta` |
+| Mail suggestions are counts only (addresses, domains, sent / received / threads / replied, last seen, and the owner's yes/no pick), from the owner's own Claude reading headers; any other key is refused; free-mail domains are never stored as a domain; they are never rules until the owner saves them on the rule screen; only the owner reads them, administrators included; the Engine holds no mailbox token | `report_mail_contacts` schema (`sources/mail-contacts.ts`), `source_contacts_report`, `app_source_contacts_get` (0080) |
 | Topics are made by administrators only | `app_topic_add` (admin check); `app_source_tag_set` is no longer callable by the service |
 
 What is left: the provider query is built from the rules to list less, but

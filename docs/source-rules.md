@@ -45,6 +45,46 @@ When an account reports a label named Personal, Private, Family, Medical,
 Health, Finance or Banking, the Sources screen offers an exclude rule for it.
 Nothing is added until the person clicks it.
 
+### Suggested from your mail
+
+Working out who matters no longer means digging through Gmail.
+
+1. On the Sources screen (`/app/sources`), each Gmail account has a prompt
+   with a **Copy** button. Paste it into Claude (with that account's Gmail
+   connector attached). It starts the plugin's suggest-rules skill
+   ([plugin.md](plugin.md#suggesting-gmail-rules)).
+2. Claude reads only header metadata (from, to, cc, date, labels) of the
+   last 90 days, counts it on the person's machine, and asks up to four
+   short questions: which domains to keep, which people, anyone missing,
+   and a final check.
+3. Claude sends counts and the person's picks only (`report_mail_contacts`,
+   migration 0080; each row's `chosen` is true or false). The Engine never
+   holds a mailbox token, and Claude never makes a rule.
+4. The account's rule screen shows the **Suggested from your mail** card
+   with the picks ticked. The person saves them there.
+
+On the card:
+
+- **Ticked** to start: what the person picked in Claude. With no picks (they
+  skipped the questions, or an older report): anyone they **sent** mail to 3
+  or more times. Nothing is added until they press the button.
+- **Has a rule**: a domain or person an existing rule's addresses already
+  cover (include or exclude, a domain also covering its subdomains) shows
+  the rule's name and no box.
+- **Free mail** (gmail.com, outlook.com and the like) is never offered as a
+  domain, only as a person.
+- One save ("Add the ticked ones as rules") goes through the ordinary rule
+  save: each ticked domain becomes its own include rule (`any_address:
+  @domain`, named after the domain); the ticked people go into one include
+  rule, **People from your mail** (split at 50 a rule). All of them file
+  under the one target chosen on the card (private by default). Filing under
+  a topic shows the dry-run first and needs the explicit yes, like any new
+  include rule; the database checks the whole list again.
+- No suggestions yet: the card shows the same prompt with a copy button.
+  Suggestions older than 30 days show their age. A new run replaces them.
+- Only the owner sees their own suggestions (`app_source_contacts_get`
+  refuses anyone else, administrators included).
+
 ## What the Engine enforces
 
 - `record_source_item` accepts only the sources it knows (`gmail`,
@@ -119,6 +159,8 @@ includes. The owner marks each flagged page checked from the Sources screen.
   sample the next run sends when asked (`report_ingest_candidates`:
   addresses, label or channel ids, participants, date; never a subject or
   text);
+- **Suggested from your mail** (Gmail accounts): domains and people to tick,
+  from the counts the suggest-rules skill sent (see above);
 - versions and the audit log; re-check; backfill; ask for a new sample;
 - a **Claude Code sessions** card: how many sessions the person has sent a
   note for by hand (`/qb-engine:send-session`), how many notes in all,

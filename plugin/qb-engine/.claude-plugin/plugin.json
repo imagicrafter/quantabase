@@ -1,8 +1,8 @@
 {
   "name": "qb-engine",
   "displayName": "Quantabase",
-  "version": "0.4.0",
-  "description": "Quantabase: feed your own knowledge Engine from Claude: a mechanical ingest skill that copies new Gmail messages, Drive files, Fireflies meetings and Calendar events into your Engine unchanged (your Engine keeps only what your own inclusion rules include), a setup skill that schedules one ingest task per source on the smallest model, and a skill that sends your Engine a short note of what a Claude Code session found (labelled items with exact quotes and page hints), by hand after a preview. Curation happens on the Engine, not in Claude.",
+  "version": "0.5.0",
+  "description": "Quantabase: feed your own knowledge Engine from Claude: a mechanical ingest skill that copies new Gmail messages, Drive files, Fireflies meetings and Calendar events into your Engine unchanged (your Engine keeps only what your own inclusion rules include), a setup skill that schedules one ingest task per source on the smallest model, a skill that suggests Gmail inclusion rules from who you actually mail (header counts only, ticked on your rule screen), and a skill that sends your Engine a short note of what a Claude Code session found (labelled items with exact quotes and page hints), by hand after a preview. Curation happens on the Engine, not in Claude.",
   "author": {
     "name": "imagicrafter.ai",
     "url": "https://imagicrafter.ai"

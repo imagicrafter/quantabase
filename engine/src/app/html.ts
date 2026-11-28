@@ -38,8 +38,17 @@ export function postForm(action: string, csrf: string, inner: string, button: st
 
 export type PageStatus = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 415 | 422 | 429 | 502 | 503;
 
-export function sendPage(c: Context, status: PageStatus, html: string): Response {
-  c.header("Content-Security-Policy", SETUP_CSP);
+/**
+ * The CSP for a page that loads the one same-origin helper script
+ * (/app/assets/copy.js: copy buttons). Still no inline script.
+ */
+export const SCRIPT_CSP = SETUP_CSP.replace("default-src 'none';", "default-src 'none'; script-src 'self';");
+
+/** The tag for the copy-button helper; a page that uses it is sent with `{ script: true }`. */
+export const COPY_SCRIPT = '<script src="/app/assets/copy.js" defer></script>';
+
+export function sendPage(c: Context, status: PageStatus, html: string, opts: { readonly script?: boolean } = {}): Response {
+  c.header("Content-Security-Policy", opts.script === true ? SCRIPT_CSP : SETUP_CSP);
   c.header("Cache-Control", "no-store");
   c.header("X-Robots-Tag", "noindex");
   c.header("Referrer-Policy", "same-origin");

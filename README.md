@@ -73,8 +73,8 @@ Each person feeds their own Engine from their own Claude. In Claude Code:
 /plugin install qb-engine@quantabase
 ```
 
-Its commands are `/qb-engine:ingest`, `/qb-engine:schedule-setup` and
-`/qb-engine:send-session`. Then say "set up ingest". For the Claude app on Pro, Max or Team, see
+Its commands are `/qb-engine:ingest`, `/qb-engine:schedule-setup`,
+`/qb-engine:send-session` and `/qb-engine:suggest-rules`. Then say "set up ingest". For the Claude app on Pro, Max or Team, see
 [docs/plugin.md](docs/plugin.md).
 
 ## What it does
@@ -180,7 +180,7 @@ cd engine && npm ci && npm test
 
 ## Status
 
-Version `1.0.0-rc.2`, a release candidate. Known limits are listed in
+Version `1.0.0-rc.3`, a release candidate. Known limits are listed in
 [`CHANGELOG.md`](CHANGELOG.md) and in
 [`docs/manual.md`](docs/manual.md#10-known-limits).
 

@@ -2,12 +2,15 @@ import type { Context, Hono } from "hono";
 import { logger } from "../log/logger.js";
 import { isRuleSource, parseRules, type Rule, type RuleSource } from "../sources/rules.js";
 import { readForm, UUID, type Allowed, type ScreenDeps } from "./guard.js";
-import { appLayout, card, esc, hidden, notice, postForm, sendMessage, sendPage } from "./html.js";
+import { parseSuggestions } from "../sources/mail-contacts.js";
+import { appLayout, card, COPY_SCRIPT, esc, hidden, notice, postForm, sendMessage, sendPage } from "./html.js";
 import { applyOp, describeRule, forSave, needsYes, parseTarget, ruleFromForm, type RuleOp } from "./sources-edit.js";
 import {
   accountsCard, addAccountCard, addRuleCard, historyHtml, pickerOf, previewHtml, recheckPagesCard, rulesCard,
-  sessionsCard, SOURCE_LABEL, suggestionsCard, toolsCard,
+  sessionsCard, SOURCE_LABEL, sourcesIntroCard, suggestionsCard, toolsCard,
 } from "./sources-view.js";
+import { parsePicks, rulesFromPicks } from "./sources-suggest.js";
+import { gmailPromptsCard, mailSuggestionsCard } from "./sources-suggest-view.js";
 import { AppMissingFunctionError, type Row } from "./store.js";
 
 /**
@@ -18,6 +21,7 @@ import { AppMissingFunctionError, type Row } from "./store.js";
  *   /app/sources/:id               the rule list: order, add, remove, topic
  *   /app/sources/:id/preview       dry-run of the rules on the metadata sample
  *   /app/sources/:id/history       versions and audit
+ *   /app/sources/:id/suggested     add ticked mail suggestions as rules (0080)
  *
  * The database decides who may read or change what: each function takes the
  * signed-in email and refuses an account that is not the caller's, even an
@@ -48,7 +52,10 @@ const sourcesHome: Handler = async (c, me, deps) => {
     deps.store.sourceSummary(me.email, "claude-code").catch((e: unknown) => (e instanceof AppMissingFunctionError ? null : Promise.reject(e))),
   ]);
   const csrf = deps.csrf.token(me.email, SCOPE);
-  return page(c, "Sources", accountsCard(accounts) + sessionsCard(sessions) + recheckPagesCard(pages, csrf) + addAccountCard(csrf));
+  const prompts = gmailPromptsCard(accounts);
+  const body = sourcesIntroCard() + prompts + accountsCard(accounts) + sessionsCard(sessions) + recheckPagesCard(pages, csrf) + addAccountCard(csrf);
+  if (prompts === "") return page(c, "Sources", body);
+  return sendPage(c, 200, appLayout("app", HERE, "Sources", body + COPY_SCRIPT), { script: true });
 };
 
 const addAccount: Handler = async (c, me, deps) => {
@@ -65,17 +72,28 @@ const addAccount: Handler = async (c, me, deps) => {
   return c.redirect(`/app/sources/${String(row["id"])}`, 303);
 };
 
+/** The account's mail suggestions (0080): null before 0080 is applied; none for a Fireflies account. */
+async function mailContactsOf(deps: ScreenDeps, email: string, id: string, row: Row): Promise<Row | null> {
+  if (String(row["source"]) !== "gmail") return {};
+  if (!deps.store.mailContacts) return null;
+  return deps.store.mailContacts(email, id).catch((e: unknown) => (e instanceof AppMissingFunctionError ? null : Promise.reject(e)));
+}
+
 const accountPage: Handler = async (c, me, deps) => {
   const id = accountId(c);
   if (!id) return notFound(c);
   const row = await deps.store.sourceRules(me.email, id);
+  const contacts = await mailContactsOf(deps, me.email, id, row);
   const csrf = deps.csrf.token(me.email, SCOPE);
   const title = `${SOURCE_LABEL[String(row["source"])] ?? String(row["source"])}: ${String(row["account"] ?? "")}`;
   const counts = card(`<p>${esc(row["items_saved"] ?? 0)} items kept · ${esc(row["items_skipped"] ?? 0)} left out by the rules. <a href="/app/sources">All your sources</a></p>`);
+  const mail = mailSuggestionsCard(row, contacts, csrf, new Date());
   const split =
-    `<div class="rules-split"><div class="rules-builder">${addRuleCard(row, csrf)}${suggestionsCard(row, csrf)}</div>` +
+    `<div class="rules-split"><div class="rules-builder">${mail}${addRuleCard(row, csrf)}${suggestionsCard(row, csrf)}</div>` +
     `<div class="rules-list">${savedNote(c)}${rulesCard(row, csrf)}</div></div>`;
-  return page(c, title, counts + split + toolsCard(row, csrf));
+  const body = counts + split + toolsCard(row, csrf);
+  if (mail === "") return page(c, title, body);
+  return sendPage(c, 200, appLayout("app", HERE, title, body + COPY_SCRIPT), { script: true });
 };
 
 /** After a save the screen reloads with ?saved=<version> (and re-file counts): a small note, not a page of its own. */
@@ -175,6 +193,30 @@ const changeRules: Handler = async (c, me, deps) => {
   return confirmPage(c, me, deps, id, version, next, change, preview);
 };
 
+/** Ticked mail suggestions become ordinary include rules, saved like any other add. */
+const addSuggested: Handler = async (c, me, deps) => {
+  const id = accountId(c);
+  if (!id) return notFound(c);
+  const picks = await allValues(c, "pick");
+  const sent = await readForm(c, deps, "app", me.email, SCOPE);
+  if (!sent.ok) return sent.response;
+  const version = Number(sent.form["version"] ?? "-1");
+  if (!Number.isInteger(version) || version < 0) return page(c, "Not saved", notice("error", "Open the rules again."), 400);
+  const row = await deps.store.sourceRules(me.email, id);
+  const contacts = await mailContactsOf(deps, me.email, id, row);
+  const current = parseRules(row["rules"]);
+  const chosen = parsePicks(picks, parseSuggestions(contacts?.["contacts"]), current);
+  if (typeof chosen === "string") return page(c, "Not saved", notice("error", chosen), 400);
+  const topics = Array.isArray(row["topics"]) ? row["topics"].map(String) : [];
+  const added = rulesFromPicks(chosen, sent.form["target"] ?? "", topics, pickerOf(row));
+  if (typeof added === "string") return page(c, "Not saved", notice("error", added), 400);
+  const next = added.reduce<readonly Rule[] | string>((acc, rule) => (typeof acc === "string" ? acc : applyOp(acc, { op: "add", rule })), current);
+  if (typeof next === "string") return page(c, "Not saved", notice("error", next), 400);
+  if (!added.some((rule) => needsYes(current, { op: "add", rule }))) return save(c, me, deps, id, next, version);
+  const result = await deps.store.previewSourceRules(me.email, id, next.map(forSave));
+  return confirmPage(c, me, deps, id, version, next, `Add ${added.length} ${added.length === 1 ? "rule" : "rules"} from your mail: ${added.map(describeRule).join("; ")}.`, result);
+};
+
 const preview: Handler = async (c, me, deps) => {
   const id = accountId(c);
   if (!id) return notFound(c);
@@ -238,6 +280,7 @@ export function addSourceRoutes(app: Hono, h: (handler: Handler) => (c: Context)
   app.post("/sources/pages/:pid/done", h(pageDone));
   app.get("/sources/:id", h(accountPage));
   app.post("/sources/:id/rules", h(changeRules));
+  app.post("/sources/:id/suggested", h(addSuggested));
   app.get("/sources/:id/preview", h(preview));
   app.get("/sources/:id/history", h(history));
   app.post("/sources/:id/recheck", h(recheck));

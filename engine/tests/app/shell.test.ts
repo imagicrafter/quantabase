@@ -65,6 +65,8 @@ describe("the shared shell", () => {
     expect(sections(setup)).toEqual(["Library", "Engine"]);
     expect(sections(app)).toEqual(sections(setup));
     for (const href of ["/app", "/app/knowledge", "/app/pages", "/app/todo", "/app/sources"]) expect(navOf(setup)).toContain(`href="${href}"`);
+    expect(navOf(setup)).toMatch(/href="\/app\/sources"[^>]*>.*?<span>Sources<\/span>/s);
+    expect(navOf(setup)).not.toContain("Subscriptions");
   });
 
   it("Engine has Pipeline, Ledger and Staff & settings; it expands (details/summary, no script) to the setup screens", () => {

@@ -9,6 +9,22 @@ the version you run, the latest on `stable` and what changed in between. An
 entry says so when updating needs more than the steps in
 [`docs/operations.md`](docs/operations.md#updates).
 
+## 1.0.0-rc.3 - 2026-11-28
+
+**Updating needs one extra step:** after Force Rebuild and Deploy, open the
+Database screen and apply the pending update (migration 0080).
+
+- **Claude helps you set up Gmail rules.** Each Gmail account on the Sources
+  screen has a prompt with a Copy button. Paste it into Claude: the new
+  `/qb-engine:suggest-rules` skill reads only who wrote to whom and when
+  (never subjects or text) from the last 90 days, asks a few short
+  questions, and sends your picks to the Engine. On the account page the
+  "Suggested from your mail" card has them ticked; you save the rule there.
+  Claude never creates a rule. Update the plugin to 0.5.0 to get the skill.
+- **"Subscriptions" is now "Sources"**, and the screen starts with a short
+  note: rules decide what is kept (nothing is kept without an include rule)
+  and they replace the older source tags.
+
 ## 1.0.0-rc.2 - 2026-11-26
 
 **Updating needs one extra step:** after Force Rebuild and Deploy, open the

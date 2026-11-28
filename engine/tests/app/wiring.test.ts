@@ -35,6 +35,15 @@ describe("the app screens are mounted behind sign-in", () => {
     expect(res.headers.get("content-type")).toMatch(/text\/css/);
   });
 
+  it("serves the copy-button script under /app, and nothing it is not asked for", async () => {
+    const res = await get("/app/assets/copy.js");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/javascript/);
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(await res.text()).toContain("data-copy");
+    expect((await get("/app/assets/..%2Fpackage.json")).status).toBe(404);
+  });
+
   it("a forged post to the owner screens is refused before anything else", async () => {
     const res = await app.request("/app/reviews/22222222-2222-4222-8222-222222222222/decide", {
       method: "POST",
