@@ -6,6 +6,7 @@ import type { EngineMode } from "../setup/mode.js";
 import { isFormPost, sameSite, type Csrf } from "./csrf.js";
 import { sendMessage, type Area } from "./html.js";
 import { UPDATE_NEEDED_TEXT } from "./db-update.js";
+import type { FirefliesScreenDeps } from "./fireflies-routes.js";
 import { AppDeniedError, AppInputError, AppMissingFunctionError, type AppStore, type Row } from "./store.js";
 
 /**
@@ -27,6 +28,8 @@ export type ScreenDeps = {
   readonly store: AppStore;
   readonly csrf: Csrf;
   readonly now: () => number;
+  /** The Fireflies webhook (0081). Absent: the Sources screens show no Connect Fireflies card. */
+  readonly fireflies?: FirefliesScreenDeps;
 };
 
 export type Allowed = { readonly ok: true; readonly email: string; readonly access: AccessSettings; readonly who: Row | null };

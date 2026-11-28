@@ -303,7 +303,8 @@ pg_cron or the edge; "pokes received, busy" points at a stuck run.
 claiming items until none are left or about 12 minutes have passed:
 `select workspace.curator_tick_poke('batch');`
 
-**Sign-in in front of the service.** The tick path carries no Cloudflare
+**Sign-in in front of the service.** (The Fireflies webhook path has the
+same kind of bypass; see "After 0081" under Updates.) The tick path carries no Cloudflare
 Access sign-in. The sign-in setup (the `/setup` page or `kbe access setup`)
 now adds a bypass application for `/internal/curator/tick` only. An Engine
 whose sign-in was set up earlier needs the sign-in setup run once more, or
@@ -433,6 +434,21 @@ python -m kbe deploy status
 
 There is no automatic update. `deploy_on_push` is off: an Engine changes
 only when its owner deploys.
+
+**After 0081 (Fireflies by webhook).** Fireflies must reach
+`/hooks/fireflies/...` without Cloudflare sign-in. A new Engine's sign-in
+setup adds a bypass application for that one path. An Engine whose sign-in
+was set up earlier needs the sign-in setup run once more: an administrator
+reopens setup (`kbe access reopen --clipboard`) and runs the `/setup` page
+again, or runs `kbe access setup`. It adds the rule `KB Engine Fireflies
+webhook bypass: <host>` and the application `KB Engine Fireflies webhook:
+<host>` and changes nothing else. Until then, Fireflies' **Send test** gets
+Cloudflare's sign-in page instead of the Engine, and the account page keeps
+saying "Waiting for the first delivery". The Engine calls
+`api.fireflies.ai` only when a person connects a key, a delivery arrives, or
+the person presses Fetch again or a backfill. A scheduled Fireflies ingest
+task in someone's Claude can be deleted once their account is connected; it
+skips that account on its own (plugin 0.6.0).
 
 **After 0077 (names on pages).** An Engine set up before 0077 stored the
 owner's email as their display name, so pages say "the owner". Open

@@ -34,6 +34,12 @@ own timer, with no connectors.
    fill each field. A first run looks back 7 days. For Gmail and Fireflies it
    also returns the person's inclusion rules and a provider query narrowed by
    them (Gmail search text; a Fireflies channel and participant filter).
+   A Fireflies account the Engine's own webhook feeds (Sources, **Connect
+   Fireflies**; see [source-rules.md](source-rules.md#fireflies-by-webhook))
+   comes back with `handled_by_webhook: true`: the run reports the
+   channels and hands over nothing (`ingest fireflies: handled by the
+   Engine's webhook, skipped`), and `schedule-setup` does not schedule a
+   task for it (plugin 0.6.0).
 3. For Gmail and Fireflies, Claude reports the account's labels or channels
    (`report_ingest_candidates`), the picker for the rule builder, and when
    the person asked for one, a metadata-only sample of the last 7 days for

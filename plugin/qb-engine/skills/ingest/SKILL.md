@@ -1,6 +1,6 @@
 ---
 name: ingest
-description: Copy new items from ONE source account (gmail or fireflies, with the account's address) or ONE source (drive, calendar) into the person's Quantabase (their knowledge Engine), unchanged, with record_source_item. Mechanical only - no summaries, no judgement. The Engine keeps only what the person's own inclusion rules include. Use when a scheduled task or the person says "run ingest for gmail <address>", "ingest my mail / Drive / meetings / calendar into the Engine", or "ingest <source> [<account>]". One source per run.
+description: Copy new items from ONE source account (gmail or fireflies, with the account's address) or ONE source (drive, calendar) into the person's Quantabase (their knowledge Engine), unchanged, with record_source_item. Mechanical only - no summaries, no judgement. The Engine keeps only what the person's own inclusion rules include. A Fireflies account the Engine's own webhook feeds is skipped. Use when a scheduled task or the person says "run ingest for gmail ann@work.example", "ingest my mail / Drive / meetings / calendar into the Engine", or "ingest SOURCE ACCOUNT". One source per run.
 ---
 
 # ingest: copy new items into the Engine
@@ -73,6 +73,12 @@ It returns:
   with one of `filter.participants`
 - `nothing_to_record` (Gmail, Fireflies): `true` when no rule can include
   anything. Then skip Step 3 (still do Step 2a).
+- `handled_by_webhook` (Fireflies): `true` when the Engine's own Fireflies
+  webhook brings this account's meetings in by itself. Then do Step 2a only
+  (report the channels), skip Steps 2 and 3 (list and hand over nothing),
+  and report exactly this one line:
+  `ingest fireflies: handled by the Engine's webhook, skipped`.
+  Never hand a meeting over for such an account: it would be stored twice.
 - `report_rule` and `sample_wanted` (Gmail, Fireflies): what to report in
   Step 2a
 - `scope.source_id`, `scope.title`, `scope.body`, `scope.source_created_at`,

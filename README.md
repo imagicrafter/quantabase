@@ -180,7 +180,7 @@ cd engine && npm ci && npm test
 
 ## Status
 
-Version `1.0.0-rc.3`, a release candidate. Known limits are listed in
+Version `1.0.0-rc.4`, a release candidate. Known limits are listed in
 [`CHANGELOG.md`](CHANGELOG.md) and in
 [`docs/manual.md`](docs/manual.md#10-known-limits).
 

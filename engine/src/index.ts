@@ -42,6 +42,8 @@ import { makeSettingsRoutes } from "./app/settings-routes.js";
 import { makeIndexingRoutes } from "./app/indexing-routes.js";
 import { makePipelineRoutes } from "./app/pipeline-routes.js";
 import { makeBackupRoutes } from "./app/backup-routes.js";
+import { HOOK_PATH, makeHookRoute } from "./fireflies/route.js";
+import { liveHookDeps } from "./fireflies/defaults.js";
 
 const app = new Hono();
 
@@ -154,6 +156,15 @@ app.get("/health", (c) =>
 app.use(TICK_PATH, bodyLimit({ maxSize: 1024 }));
 app.use(TICK_PATH, preAuthRateLimit);
 app.route(TICK_PATH, makeTickRoute());
+
+// ── /hooks/fireflies/<id> ───────────────────────────────────────────────────
+// Where Fireflies posts a finished meeting (fireflies/route.ts). No sign-in
+// (a Cloudflare bypass app covers this path only, setup/plan.ts); the
+// signature under the account's own secret is the check. A delivery is a few
+// hundred bytes: 16 KB is the limit, and the pre-auth rate limit comes first.
+app.use(`${HOOK_PATH}/*`, bodyLimit({ maxSize: 16 * 1024 }));
+app.use(`${HOOK_PATH}/*`, preAuthRateLimit);
+app.route(HOOK_PATH, makeHookRoute(liveHookDeps));
 
 // ── /status ─────────────────────────────────────────────────────────────────
 // The Engine dashboard (the config's `dashboard` section). Behind its own Access app with MFA;

@@ -85,6 +85,14 @@ Do not send, reply, draft, delete, move, label, share or edit anything.
 End with the skill's one-line report.
 ```
 
+**Fireflies by webhook.** Before drafting a Fireflies task, call
+`get_ingest_plan` with `{"source": "fireflies", "account": "<account>"}`. If
+it returns `handled_by_webhook: true`, the Engine's own webhook already
+brings that account's meetings in (set up on **Sources** in their Engine,
+**Connect Fireflies**). Do not schedule a task for it; tell the person so.
+For a person who has not connected the webhook, suggest it: it needs no
+scheduled task and never cuts a transcript.
+
 Do not schedule more than one task per source account. If the person's plan does not
 offer schedules, say so and stop; they can still run `/qb-engine:ingest` by hand.
 

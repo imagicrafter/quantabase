@@ -9,6 +9,26 @@ the version you run, the latest on `stable` and what changed in between. An
 entry says so when updating needs more than the steps in
 [`docs/operations.md`](docs/operations.md#updates).
 
+## 1.0.0-rc.4 - 2026-11-28
+
+**Updating needs two extra steps:** after Force Rebuild and Deploy, open the
+Database screen and apply the pending update (migration 0081). Then run the
+sign-in setup once more (the Sign-in screen, or `kbe access setup`) so
+Fireflies can reach the new webhook address; see `docs/operations.md`,
+"After 0081".
+
+- **Fireflies by webhook, inside the Engine.** On the Sources screen,
+  "Connect Fireflies": paste your Fireflies API key, then paste the webhook
+  address and signing secret the Engine shows into Fireflies (Integrations,
+  API, Webhooks). When a meeting is ready, Fireflies tells the Engine and the
+  Engine fetches the full transcript with one call. No polling, no Claude
+  tokens, and nothing is cut: very long transcripts are stored as linked
+  parts. Your rules still decide what is kept. Missed meetings show on the
+  account page with "Fetch again"; an optional one-time backfill brings in
+  the last 30 or 90 days. Keys are kept in Supabase Vault.
+- **Plugin 0.6.0.** The scheduled ingest skips a Fireflies account that is
+  connected by webhook, so meetings are not stored twice.
+
 ## 1.0.0-rc.3 - 2026-11-28
 
 **Updating needs one extra step:** after Force Rebuild and Deploy, open the

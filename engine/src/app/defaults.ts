@@ -18,6 +18,7 @@ import { SUPABASE_API_HOST } from "./first-run.js";
 import { createReleaseCheck, RELEASE_HOST } from "./release-check.js";
 import type { UpdatesDeps } from "./updates-routes.js";
 import { ENGINE_VERSION } from "../version.js";
+import { liveFirefliesScreens } from "../fireflies/defaults.js";
 
 /** The app screens' real dependencies, read on every request. */
 
@@ -68,6 +69,7 @@ const liveScreens = (): SettingsDeps => ({
   hostCheck: (host) => checkHostReaches(host),
   database: liveDatabase(),
   updates: liveUpdates,
+  fireflies: liveFirefliesScreens,
 });
 
 const liveFirstRun = (): FirstRunRouteDeps => ({

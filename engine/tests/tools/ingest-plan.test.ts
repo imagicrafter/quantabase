@@ -191,6 +191,50 @@ describe("get_ingest_plan: Drive and Calendar keep the cursor plan", () => {
     expect(skill).toMatch(/full transcript/);
   });
 
+  it("says skip for a Fireflies account the Engine's webhook feeds, and still asks for the channel report", async () => {
+    rpcMock.mockImplementation(async (fn: string) =>
+      fn === "source_webhook_connected" ? { data: true, error: null } : { data: rulesPlanRow({ source: "fireflies" }), error: null },
+    );
+    const out = (await plan().run({ source: "fireflies", account: "ann@work.example" }, CTX)) as Record<string, unknown>;
+    expect(out["handled_by_webhook"]).toBe(true);
+    expect(out["skip"]).toBe(true);
+    expect(out["nothing_to_record"]).toBe(true);
+    expect(String(out["skip_rule"])).toMatch(/handled by the Engine's webhook, skipped/);
+    expect(String(out["report_rule"])).toMatch(/channels/);
+    const asked = rpcMock.mock.calls.find((c) => c[0] === "source_webhook_connected");
+    expect(asked?.[1]).toEqual({ p_oauth_subject: CTX.sub, p_source: "fireflies", p_account: "ann@work.example" });
+  });
+
+  it("a Fireflies account without the webhook (or an older database) plans as before", async () => {
+    rpcMock.mockImplementation(async (fn: string) =>
+      fn === "source_webhook_connected"
+        ? { data: null, error: { code: "PGRST202", message: "missing" } }
+        : { data: rulesPlanRow({ source: "fireflies" }), error: null },
+    );
+    const out = (await plan().run({ source: "fireflies", account: "ann@work.example" }, CTX)) as Record<string, unknown>;
+    expect(out["handled_by_webhook"]).toBeUndefined();
+    expect(out["nothing_to_record"]).toBe(false);
+  });
+
+  it("never asks about a webhook for Gmail", async () => {
+    rpcMock.mockResolvedValue({ data: rulesPlanRow(), error: null });
+    await plan().run({ source: "gmail", account: "ann@work.example" }, CTX);
+    expect(rpcMock.mock.calls.some((c) => c[0] === "source_webhook_connected")).toBe(false);
+  });
+
+  it("the ingest skill and schedule-setup both honour the skip", () => {
+    const ingest = readFileSync(new URL("../../../plugin/qb-engine/skills/ingest/SKILL.md", import.meta.url), "utf8");
+    const schedule = readFileSync(new URL("../../../plugin/qb-engine/skills/schedule-setup/SKILL.md", import.meta.url), "utf8");
+    expect(ingest).toContain("handled_by_webhook");
+    expect(ingest).toContain("ingest fireflies: handled by the Engine's webhook, skipped");
+    expect(schedule).toContain("handled_by_webhook");
+    // claude.ai warns about angle brackets (XML-like tags) in a skill description.
+    for (const doc of [ingest, schedule]) {
+      const description = /^description: (.*)$/m.exec(doc)?.[1] ?? "";
+      expect(description).not.toMatch(/[<>]/);
+    }
+  });
+
   it("refuses an unknown source or extra arguments before any database call", async () => {
     await expect(plan().run({ source: "slack" }, CTX)).rejects.toThrow();
     await expect(plan().run({ source: "drive", owner: "eve" }, CTX)).rejects.toThrow();

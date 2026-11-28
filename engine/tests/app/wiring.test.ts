@@ -53,3 +53,27 @@ describe("the app screens are mounted behind sign-in", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("the Fireflies webhook is mounted without sign-in, behind its own checks", () => {
+  const hook = (body: string, headers: Record<string, string> = {}) =>
+    app.request("/hooks/fireflies/hookAAAAhookAAAAhookAAAAhookAAAA", {
+      method: "POST",
+      headers: { host: "engine.example.com", "content-type": "application/json", ...headers },
+      body,
+    });
+
+  it("refuses an unsigned delivery with 401 before any database call", async () => {
+    const res = await hook('{"event":"meeting.summarized","meeting_id":"M1"}');
+    expect(res.status).toBe(401);
+  });
+
+  it("refuses an oversized body before reading it", async () => {
+    const res = await hook(JSON.stringify({ event: "meeting.summarized", pad: "x".repeat(20_000) }), { "X-Hub-Signature": `sha256=${"0".repeat(64)}` });
+    expect(res.status).toBe(413);
+  });
+
+  it("answers POST only", async () => {
+    const res = await app.request("/hooks/fireflies/hookAAAAhookAAAAhookAAAAhookAAAA", { headers: { host: "engine.example.com" } });
+    expect(res.status).toBe(404);
+  });
+});

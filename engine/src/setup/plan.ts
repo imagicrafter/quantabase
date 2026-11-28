@@ -51,7 +51,7 @@ export type DnsStep = StepBase & {
 };
 
 export type PolicyStep = StepBase & {
-  readonly id: "engine_policy" | "admin_policy" | "tick_policy";
+  readonly id: "engine_policy" | "admin_policy" | "tick_policy" | "hooks_policy";
   readonly kind: "policy";
   readonly name: string;
   /** "bypass" only for the curator timer's path. Default "allow". */
@@ -62,7 +62,7 @@ export type PolicyStep = StepBase & {
 };
 
 export type ApplicationStep = StepBase & {
-  readonly id: "engine_app" | "admin_app" | "tick_app";
+  readonly id: "engine_app" | "admin_app" | "tick_app" | "hooks_app";
   readonly kind: "application";
   readonly policy: PolicyStep["id"];
   /** The hostname (and path) that identifies the application. */
@@ -314,6 +314,53 @@ function tickApp(inputs: SetupInputs): ApplicationStep {
   };
 }
 
+/** Where Fireflies posts finished meetings (fireflies/route.ts HOOK_PATH). */
+export const HOOKS_PATH = "/hooks/fireflies";
+
+/**
+ * The Fireflies webhook path skips Cloudflare sign-in: Fireflies cannot sign
+ * in. Each delivery is checked against the HMAC signature under that
+ * account's own secret (Supabase Vault) instead, and the path answers POST
+ * only. The bypass covers this one path and nothing above it.
+ */
+function hooksPolicy(inputs: SetupInputs): PolicyStep {
+  return {
+    id: "hooks_policy",
+    kind: "policy",
+    title: "Let Fireflies deliver meetings",
+    lines: [
+      `Skips sign-in for ${inputs.host}${HOOKS_PATH} only.`,
+      "Every delivery there must carry a signature made with that account's own signing secret, which lives in Supabase Vault.",
+    ],
+    name: `KB Engine Fireflies webhook bypass: ${inputs.host}`,
+    decision: "bypass",
+    include: [{ everyone: {} }],
+    sessionDuration: ENGINE_SESSION,
+  };
+}
+
+function hooksApp(inputs: SetupInputs): ApplicationStep {
+  const path = `${inputs.host}${HOOKS_PATH}`;
+  return {
+    id: "hooks_app",
+    kind: "application",
+    title: "Let Fireflies reach the meeting webhook",
+    lines: [`An application for ${path} with the bypass rule above.`, takeoverLine(inputs)],
+    policy: "hooks_policy",
+    domain: path,
+    secondFactor: false,
+    replaceExisting: inputs.replaceExisting,
+    body: {
+      name: `KB Engine Fireflies webhook: ${inputs.host}`,
+      type: "self_hosted",
+      domain: path,
+      destinations: [{ type: "public", uri: path }],
+      session_duration: ENGINE_SESSION,
+      app_launcher_visible: false,
+    },
+  };
+}
+
 /** The ordered list of changes for these inputs. Rules come before the apps that use them. */
 export function buildPlan(inputs: SetupInputs): Plan {
   return {
@@ -331,6 +378,8 @@ export function buildPlan(inputs: SetupInputs): Plan {
       adminApp(inputs),
       tickPolicy(inputs),
       tickApp(inputs),
+      hooksPolicy(inputs),
+      hooksApp(inputs),
     ],
   };
 }

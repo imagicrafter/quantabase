@@ -59,6 +59,8 @@ describe("apply: a fresh Cloudflare account", () => {
       admin_app: "created",
       tick_policy: "created",
       tick_app: "created",
+      hooks_policy: "created",
+      hooks_app: "created",
     });
     const [engineApp, adminApp] = fake.state.apps;
     expect(report.access).toEqual({
@@ -214,8 +216,8 @@ describe("apply: a second run", () => {
       new Set(["unchanged"]),
     );
     expect(second.access).toEqual(first.access);
-    expect(fake.state.apps).toHaveLength(3);
-    expect(fake.state.policies).toHaveLength(3);
+    expect(fake.state.apps).toHaveLength(4);
+    expect(fake.state.policies).toHaveLength(4);
     expect(fake.state.dnsRecords).toHaveLength(1);
     expect(fake.state.identityProviders).toHaveLength(1);
   });
@@ -234,10 +236,12 @@ describe("apply: a second run", () => {
       admin_app: "unchanged",
       tick_policy: "unchanged",
       tick_app: "unchanged",
+      hooks_policy: "unchanged",
+      hooks_app: "unchanged",
       dns: "unchanged",
     });
-    expect(fake.state.policies).toHaveLength(3);
-    expect(fake.state.apps).toHaveLength(3);
+    expect(fake.state.policies).toHaveLength(4);
+    expect(fake.state.apps).toHaveLength(4);
     expect(fake.state.policies[0]?.["include"]).toHaveLength(3);
     // The same applications: the AUD tags do not change.
     expect(second.access?.aud).toBe(first.access?.aud);
@@ -261,7 +265,7 @@ describe("apply: a second run", () => {
       oauth_configuration: { enabled: true },
       policies: [{ id: fake.state.policies[0]?.["id"], precedence: 1 }],
     });
-    expect(fake.state.apps).toHaveLength(3);
+    expect(fake.state.apps).toHaveLength(4);
   });
 
   it("rewrites a rule that carries anything that weakens sign-in", async () => {
@@ -489,6 +493,8 @@ describe("apply: what is already there", () => {
       admin_app: "not_run",
       tick_policy: "not_run",
       tick_app: "not_run",
+      hooks_policy: "not_run",
+      hooks_app: "not_run",
     });
     expect(noteOf(report, "dns")).toMatch(/already has DNS records/);
     expect(fake.state.dnsRecords).toHaveLength(1);
@@ -543,6 +549,8 @@ describe("apply: the token", () => {
       admin_app: "not_run",
       tick_policy: "not_run",
       tick_app: "not_run",
+      hooks_policy: "not_run",
+      hooks_app: "not_run",
     });
     expect(noteOf(report, "engine_policy")).toMatch(
       /needs: Account - Access: Apps and Policies - Write/,
@@ -596,6 +604,8 @@ describe("apply: Cloudflare fails part-way", () => {
         admin_app: "not_run",
         tick_policy: "not_run",
         tick_app: "not_run",
+        hooks_policy: "not_run",
+        hooks_app: "not_run",
       });
       expect(noteOf(report, "engine_app")).toContain(String(status));
       expect(report.access).toBeNull();
@@ -627,9 +637,11 @@ describe("apply: Cloudflare fails part-way", () => {
       admin_app: "created",
       tick_policy: "created",
       tick_app: "created",
+      hooks_policy: "created",
+      hooks_app: "created",
     });
     expect(second.access).not.toBeNull();
-    expect(fake.state.policies).toHaveLength(3);
+    expect(fake.state.policies).toHaveLength(4);
     expect(fake.state.dnsRecords).toHaveLength(1);
   });
 
@@ -662,6 +674,8 @@ describe("apply: Cloudflare fails part-way", () => {
       admin_app: "failed",
       tick_policy: "not_run",
       tick_app: "not_run",
+      hooks_policy: "not_run",
+      hooks_app: "not_run",
     });
     expect(report.access).toBeNull();
   });

@@ -583,8 +583,8 @@ describe("POST /setup/apply", () => {
     expect(await second.text()).toMatch(/already running/);
     release();
     expect((await first).status).toBe(200);
-    expect(inner.cloudflare.state.apps).toHaveLength(3);
-    expect(inner.cloudflare.state.policies).toHaveLength(3);
+    expect(inner.cloudflare.state.apps).toHaveLength(4);
+    expect(inner.cloudflare.state.policies).toHaveLength(4);
     // ...and the lock is released afterwards, even after a failure.
     const third = await world.post("/setup/apply", fields);
     expect(third.status).not.toBe(409);
@@ -678,8 +678,8 @@ describe("POST /setup/apply", () => {
     // The same choices again finish the job, with no duplicates.
     const again = await applyWith(world);
     expect(again.status).toBe(200);
-    expect(world.cloudflare.state.apps).toHaveLength(3);
-    expect(world.cloudflare.state.policies).toHaveLength(3);
+    expect(world.cloudflare.state.apps).toHaveLength(4);
+    expect(world.cloudflare.state.policies).toHaveLength(4);
     expect(world.cloudflare.state.dnsRecords).toHaveLength(1);
     expect(world.db.row.setup_state).toBe("complete");
   });
@@ -945,8 +945,8 @@ describe("/setup once the Engine is set up", () => {
         ENGINE_HOST,
       );
       expect(res.status).toBe(200);
-      expect(done.cloudflare.state.apps).toHaveLength(3);
-      expect(done.cloudflare.state.policies).toHaveLength(3);
+      expect(done.cloudflare.state.apps).toHaveLength(4);
+      expect(done.cloudflare.state.policies).toHaveLength(4);
       expect(done.db.row.access?.level).toBe("owner");
       expect(done.db.row.setup_state).toBe("complete");
     });

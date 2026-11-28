@@ -38,6 +38,8 @@ describe("the plan", () => {
         "admin_app",
         "tick_policy",
         "tick_app",
+        "hooks_policy",
+        "hooks_app",
       ]);
     }
   });
@@ -228,7 +230,7 @@ describe("the plan", () => {
             : null,
       )
       .filter(Boolean);
-    expect(new Set(names).size).toBe(6);
+    expect(new Set(names).size).toBe(8);
   });
 
   it("lets only the timer path skip sign-in, and only through a bypass rule", () => {
@@ -242,11 +244,31 @@ describe("the plan", () => {
       domain: `${base.host}/internal/curator/tick`,
       secondFactor: false,
     });
-    // No other rule is a bypass, and no other application uses this rule.
+    // No other rule is a bypass but the Fireflies webhook's, and no other application uses this rule.
     for (const s of plan.steps) {
-      if (s.kind === "policy" && s.id !== "tick_policy") expect(s.decision ?? "allow").toBe("allow");
+      if (s.kind === "policy" && s.id !== "tick_policy" && s.id !== "hooks_policy") expect(s.decision ?? "allow").toBe("allow");
       if (s.kind === "application" && s.id !== "tick_app") expect(s.policy).not.toBe("tick_policy");
     }
+  });
+
+  it("lets Fireflies reach only its webhook path, through its own bypass rule", () => {
+    const plan = buildPlan(base);
+    const policy = plan.steps.find((s) => s.id === "hooks_policy");
+    const app = plan.steps.find((s) => s.id === "hooks_app");
+    expect(policy).toMatchObject({ kind: "policy", decision: "bypass", include: [{ everyone: {} }] });
+    expect(app).toMatchObject({
+      kind: "application",
+      policy: "hooks_policy",
+      domain: `${base.host}/hooks/fireflies`,
+      secondFactor: false,
+      body: { destinations: [{ type: "public", uri: `${base.host}/hooks/fireflies` }] },
+    });
+    // The path is narrow: not /hooks, not the host, and no other application uses the rule.
+    for (const s of plan.steps) {
+      if (s.kind === "application" && s.id !== "hooks_app") expect(s.policy).not.toBe("hooks_policy");
+    }
+    const hookPath = (app as { domain: string }).domain.slice(base.host.length);
+    expect(hookPath).toBe("/hooks/fireflies");
   });
 
   it("every step says in words what it will do", () => {

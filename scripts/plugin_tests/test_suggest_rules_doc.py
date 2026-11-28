@@ -60,7 +60,7 @@ def test_the_reply_and_the_free_mail_rule_are_spelled_out():
 
 def test_the_plugin_version_is_bumped():
     manifest = json.loads((ROOT / "plugin" / "qb-engine" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == "0.5.0"
+    assert manifest["version"] == "0.6.0"
     assert "suggest" in manifest["description"]
 
 

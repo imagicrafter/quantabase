@@ -356,6 +356,15 @@ setup's own, found by a name setup made up).
 7. **Admin-pages application** `KB Engine admin pages: <host>`: self-hosted,
    `<host>/status` and `<host>/setup`, one-time PIN only, second factor
    required, 12 hour sessions.
+8. **Timer bypass** `KB Engine timer bypass: <host>` and application
+   `KB Engine timer: <host>` for `<host>/internal/curator/tick` only
+   (guarded by the timer secret).
+9. **Fireflies webhook bypass** `KB Engine Fireflies webhook bypass: <host>`
+   and application `KB Engine Fireflies webhook: <host>` for
+   `<host>/hooks/fireflies` only (guarded by each account's signing secret;
+   see [section 10](#10-the-fireflies-webhook)). An Engine set up before
+   migration 0081 gets it by running the sign-in setup again
+   ([operations.md](operations.md#updates), "After 0081").
 
 Then the team domain and both AUD tags are read back and stored, and the setup
 window closes.
@@ -696,6 +705,7 @@ enforced in the database, never by the ingest run
 | Narrowing re-files kept items owner-only at once and flags their pages | `_src_refile` |
 | The dry-run sample is metadata only (addresses, label or channel ids, participants, date); a subject or text is refused at the tool | `report_ingest_candidates` schema, `_src_meta` |
 | Mail suggestions are counts only (addresses, domains, sent / received / threads / replied, last seen, and the owner's yes/no pick), from the owner's own Claude reading headers; any other key is refused; free-mail domains are never stored as a domain; they are never rules until the owner saves them on the rule screen; only the owner reads them, administrators included; the Engine holds no mailbox token | `report_mail_contacts` schema (`sources/mail-contacts.ts`), `source_contacts_report`, `app_source_contacts_get` (0080) |
+| A Fireflies webhook delivery is stored only after its HMAC-SHA256 signature over the raw body checks out under that account's own secret; it then goes through the same rule path as `record_source_item` for that account's owner; the API key and secret live in Supabase Vault, never in a table or a log | `fireflies/route.ts`, `fireflies/signature.ts`, `fireflies_hook_record`, `_source_item_record_for` (0081); see [section 10](#10-the-fireflies-webhook) |
 | Topics are made by administrators only | `app_topic_add` (admin check); `app_source_tag_set` is no longer callable by the service |
 
 What is left: the provider query is built from the rules to list less, but
@@ -773,7 +783,50 @@ path and the token path.
 - The summarising model's provider sees the text of every labelled thread,
   approved or not (section 8).
 
-## 10. Smaller rules worth knowing
+## 10. The Fireflies webhook
+
+Migration 0081 adds the Engine's first public endpoint that is not behind
+Cloudflare sign-in apart from the curator timer: `POST
+/hooks/fireflies/<id>`, where Fireflies posts finished meetings
+([source-rules.md](source-rules.md#fireflies-by-webhook)).
+
+### What protects it
+
+| Control | Where |
+|---|---|
+| The bypass covers `<host>/hooks/fireflies` only; every other path keeps sign-in | `setup/plan.ts` (`hooks_policy`, `hooks_app`) |
+| POST only; 16 KB body limit and the pre-auth rate limit (20 a minute per address) before anything is read | `index.ts` |
+| The only check is the signature: HMAC-SHA256 of the RAW body under that account's own 32-character secret, in `X-Hub-Signature` as `sha256=<hex>` (V2) or bare hex (V1), compared timing-safe | `fireflies/signature.ts` |
+| Unknown id, missing or wrong signature: the same 401 with no detail; a malformed id never reaches the database | `fireflies/route.ts` |
+| A delivery names a meeting id only. The Engine fetches the meeting itself from `api.fireflies.ai` with the owner's own key, so a forged body cannot inject text | `fireflies/fetch.ts`, `fireflies/client.ts` |
+| The item is stored for the account's owner through the same body as `record_source_item`: their rules decide (default deny), any topic or owner in the item is dropped, the source and account are the hook's | `fireflies_hook_record`, `_source_item_record_for` (0081) |
+| The API key and signing secret live in Supabase Vault (`kbe_ff_key_<account>`, `kbe_ff_sig_<account>`); the table holds the key's last 4 characters only; the key is never logged, echoed or shown again; the secret is shown only to the account's owner on their own account page | `app_fireflies_connect`, `app_fireflies_get` (0081), `app/fireflies-routes.ts` |
+| Delivery records hold the meeting id, a status and a short reason code; never text | `fireflies_deliveries` (0081) |
+| api.fireflies.ai joins the outbound allowlist only when the Engine first calls it | `fireflies/defaults.ts` |
+
+### Threats and what is left
+
+- **Someone learns the webhook address.** Without the secret every post is a
+  401. With both (say, read off the owner's screen or Fireflies settings),
+  they can only make the Engine fetch meeting ids from the owner's own
+  Fireflies account: they cannot add text. **Disconnect** and connect again
+  makes a new address and secret.
+- **Replays.** A captured delivery sent again fetches nothing new: a meeting
+  already stored for that event is skipped, and the same text is one
+  version. Fireflies' V2 `timestamp` is not checked for freshness (the
+  docs say it changes on every retry, so it cannot tell a retry from a
+  replay); this is safe because a delivery carries no content.
+- **Flooding.** Each valid post costs one Fireflies call at most, and
+  repeats cost none; the rate limit bounds the rest. A flood of bad
+  signatures costs one database lookup each.
+- **The key.** It is a Fireflies API key with the owner's full Fireflies
+  access. It is used for the three read queries in `fireflies/client.ts`
+  only. Anyone with Supabase Vault access (the database owner) can read it.
+- **Not yet verified against live Fireflies:** the exact test-event payload,
+  and the signature on V1 webhooks (the V1 page says "the payload" without
+  saying raw; both forms are accepted).
+
+## 11. Smaller rules worth knowing
 
 - **`kbe access setup` hands no secret to anyone.** It makes the setup
   code and uses it itself. It has no flag that shows the code or takes the

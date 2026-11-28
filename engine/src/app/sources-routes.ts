@@ -12,6 +12,8 @@ import {
 import { parsePicks, rulesFromPicks } from "./sources-suggest.js";
 import { gmailPromptsCard, mailSuggestionsCard } from "./sources-suggest-view.js";
 import { AppMissingFunctionError, type Row } from "./store.js";
+import { addFirefliesRoutes } from "./fireflies-routes.js";
+import { connectCard, webhookCard } from "./fireflies-view.js";
 
 /**
  * Sources, under /app, for every person (administrators included): their OWN
@@ -22,6 +24,7 @@ import { AppMissingFunctionError, type Row } from "./store.js";
  *   /app/sources/:id/preview       dry-run of the rules on the metadata sample
  *   /app/sources/:id/history       versions and audit
  *   /app/sources/:id/suggested     add ticked mail suggestions as rules (0080)
+ *   /app/sources/fireflies/...     the Fireflies webhook (0081, fireflies-routes.ts)
  *
  * The database decides who may read or change what: each function takes the
  * signed-in email and refuses an account that is not the caller's, even an
@@ -53,7 +56,8 @@ const sourcesHome: Handler = async (c, me, deps) => {
   ]);
   const csrf = deps.csrf.token(me.email, SCOPE);
   const prompts = gmailPromptsCard(accounts);
-  const body = sourcesIntroCard() + prompts + accountsCard(accounts) + sessionsCard(sessions) + recheckPagesCard(pages, csrf) + addAccountCard(csrf);
+  const fireflies = deps.fireflies ? connectCard(csrf) : "";
+  const body = sourcesIntroCard() + prompts + accountsCard(accounts) + fireflies + sessionsCard(sessions) + recheckPagesCard(pages, csrf) + addAccountCard(csrf);
   if (prompts === "") return page(c, "Sources", body);
   return sendPage(c, 200, appLayout("app", HERE, "Sources", body + COPY_SCRIPT), { script: true });
 };
@@ -79,6 +83,18 @@ async function mailContactsOf(deps: ScreenDeps, email: string, id: string, row: 
   return deps.store.mailContacts(email, id).catch((e: unknown) => (e instanceof AppMissingFunctionError ? null : Promise.reject(e)));
 }
 
+/** A Fireflies account's webhook card (0081): "" for Gmail, or when the Engine or its database is older. */
+async function webhookOf(c: Context, me: Allowed, deps: ScreenDeps, id: string, row: Row, csrf: string): Promise<string> {
+  const ff = deps.fireflies;
+  if (String(row["source"]) !== "fireflies" || !ff) return "";
+  const state = await ff.store.get(me.email, id).catch((e: unknown) => (e instanceof AppMissingFunctionError ? null : Promise.reject(e)));
+  if (!state) return "";
+  const note = c.req.query("connected") === "1" && state["connected"] === true
+    ? `<p class="hint saved-note" role="status">Connected as ${esc(state["fireflies_email"])}. Now paste the address and the secret below into Fireflies.</p>`
+    : "";
+  return note + webhookCard(state, csrf, me.access.host, `/app/sources/${id}`, ff.jobs.isRunning(id));
+}
+
 const accountPage: Handler = async (c, me, deps) => {
   const id = accountId(c);
   if (!id) return notFound(c);
@@ -87,12 +103,13 @@ const accountPage: Handler = async (c, me, deps) => {
   const csrf = deps.csrf.token(me.email, SCOPE);
   const title = `${SOURCE_LABEL[String(row["source"])] ?? String(row["source"])}: ${String(row["account"] ?? "")}`;
   const counts = card(`<p>${esc(row["items_saved"] ?? 0)} items kept · ${esc(row["items_skipped"] ?? 0)} left out by the rules. <a href="/app/sources">All your sources</a></p>`);
+  const hook = await webhookOf(c, me, deps, id, row, csrf);
   const mail = mailSuggestionsCard(row, contacts, csrf, new Date());
   const split =
     `<div class="rules-split"><div class="rules-builder">${mail}${addRuleCard(row, csrf)}${suggestionsCard(row, csrf)}</div>` +
     `<div class="rules-list">${savedNote(c)}${rulesCard(row, csrf)}</div></div>`;
-  const body = counts + split + toolsCard(row, csrf);
-  if (mail === "") return page(c, title, body);
+  const body = counts + hook + split + toolsCard(row, csrf);
+  if (mail === "" && hook === "") return page(c, title, body);
   return sendPage(c, 200, appLayout("app", HERE, title, body + COPY_SCRIPT), { script: true });
 };
 
@@ -276,6 +293,7 @@ const pageDone: Handler = async (c, me, deps) => {
 /** Mount the Sources screens on the owner routes, behind their sign-in wrapper. */
 export function addSourceRoutes(app: Hono, h: (handler: Handler) => (c: Context) => Promise<Response>): void {
   app.get("/sources", h(sourcesHome));
+  addFirefliesRoutes(app, h);
   app.post("/sources/add", h(addAccount));
   app.post("/sources/pages/:pid/done", h(pageDone));
   app.get("/sources/:id", h(accountPage));

@@ -10,6 +10,8 @@ import {
   parseRules,
   type Rule,
 } from "../../sources/rules.js";
+import { db } from "../../db.js";
+import { logger } from "../../log/logger.js";
 import { pageRpc, rowsOf } from "./rpc.js";
 
 /**
@@ -145,7 +147,28 @@ function summary(rules: readonly Rule[]) {
   }));
 }
 
+/**
+ * True when the caller's Fireflies account is fed by the Engine's own webhook
+ * (0081): the scheduled ingest must then skip it, or every meeting would be
+ * stored twice in two shapes. An Engine whose database predates 0081 (or any
+ * error here) answers false: the run goes on as before.
+ */
+async function webhookConnected(source: string, account: string, sub: string): Promise<boolean> {
+  if (source !== "fireflies") return false;
+  const { data, error } = await db().rpc("source_webhook_connected", { p_oauth_subject: sub, p_source: source, p_account: account });
+  if (error) {
+    logger.warn({ fn: "source_webhook_connected", code: error.code }, "page RPC failed");
+    return false;
+  }
+  return data === true;
+}
+
+export const WEBHOOK_SKIP =
+  "This Fireflies account is fed by the Engine's own webhook: every finished meeting reaches the Engine by itself. " +
+  "Do NOT list or hand over any meeting (skip Step 3). Do only what report_rule says, then report: ingest fireflies: handled by the Engine's webhook, skipped.";
+
 async function rulesPlan(source: "gmail" | "fireflies", account: string, sub: string) {
+  const viaWebhook = await webhookConnected(source, account, sub);
   const plan = (await pageRpc(
     "source_ingest_plan",
     sub,
@@ -168,7 +191,7 @@ async function rulesPlan(source: "gmail" | "fireflies", account: string, sub: st
   const query = source === "gmail" ? gmailQuery(rules, gmailAfterTerm(since)) : null;
   const fallbackQuery = source === "gmail" ? gmailQuery(rules, gmailNewerThanTerm(since, Date.now())) : null;
   const filter = source === "fireflies" ? firefliesFilter(rules) : null;
-  const nothing = source === "gmail" ? query === null : filter === null;
+  const nothing = viaWebhook || (source === "gmail" ? query === null : filter === null);
   const sampleWanted = p["sample_requested"] === true;
   const what = source === "gmail" ? "labels" : "channels";
 
@@ -183,6 +206,7 @@ async function rulesPlan(source: "gmail" | "fireflies", account: string, sub: st
     rules_version: Number(p["version"] ?? 0),
     rules: summary(rules),
     nothing_to_record: nothing,
+    ...(viaWebhook ? { handled_by_webhook: true, skip: true, skip_rule: WEBHOOK_SKIP } : {}),
     ...(source === "gmail"
       ? {
           query,
@@ -216,7 +240,7 @@ async function rulesPlan(source: "gmail" | "fireflies", account: string, sub: st
 export const getIngestPlanTool: ToolSpec = {
   name: "get_ingest_plan",
   description:
-    "Call first in an ingest run. For one source (gmail, drive, fireflies, calendar) and, for gmail and fireflies, ONE account (its email address): your cursor, the time to list from (since), the most items to hand over (max_items), and how to fill record_source_item. For gmail and fireflies it also returns your inclusion rules and a query narrowed by them; the Engine keeps only what your rules include. Stores no source text.",
+    "Call first in an ingest run. For one source (gmail, drive, fireflies, calendar) and, for gmail and fireflies, ONE account (its email address): your cursor, the time to list from (since), the most items to hand over (max_items), and how to fill record_source_item. For gmail and fireflies it also returns your inclusion rules and a query narrowed by them; the Engine keeps only what your rules include. A Fireflies account the Engine's own webhook feeds comes back with handled_by_webhook: true and skip: true: hand over nothing for it. Stores no source text.",
   shape: { source: z.enum(INGEST_SOURCES), account: z.string().max(254).optional() },
   run: async (params, ctx) => {
     const { source, account } = getIngestPlanSchema.parse(params);

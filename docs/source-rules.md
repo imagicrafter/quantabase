@@ -162,6 +162,9 @@ includes. The owner marks each flagged page checked from the Sources screen.
 - **Suggested from your mail** (Gmail accounts): domains and people to tick,
   from the counts the suggest-rules skill sent (see above);
 - versions and the audit log; re-check; backfill; ask for a new sample;
+- **Connect Fireflies** and, on a Fireflies account, its webhook card
+  (address, secret, status, missed meetings, the one-time backfill; see
+  [Fireflies by webhook](#fireflies-by-webhook));
 - a **Claude Code sessions** card: how many sessions the person has sent a
   note for by hand (`/qb-engine:send-session`), how many notes in all,
   and when the last came. Notes have no account and no rules: each is sent
@@ -171,6 +174,69 @@ An edit that could let more people see new items (a new include rule to a
 topic, moving a rule, moving a rule to a topic, removing any rule) shows the
 dry-run first and needs an explicit yes. Edits that only narrow (a new
 exclude, a private rule, moving a rule to private) apply at once.
+
+## Fireflies by webhook
+
+A Fireflies account can feed the Engine by itself, with no scheduled task in
+Claude and nothing cut (migration 0081, plugin 0.6.0).
+
+**Connect.** On **Sources**, card **Connect Fireflies**, the person pastes
+their Fireflies API key (Fireflies: **Integrations**, then **Fireflies
+API**). The Engine checks it at once with one GraphQL call
+(`user { email name }`), then makes or reuses the `fireflies:<that email>`
+account and shows on its page:
+
+- "Connected as <email>", the key's last 4 characters only;
+- the **webhook address** (`https://<host>/hooks/fireflies/<id>`, an
+  unguessable id) and a 32-character **signing secret**, each with a Copy
+  button;
+- the steps: in Fireflies open **Integrations**, then **API**, then
+  **Webhooks (V2)**; paste the address and the secret; choose the event
+  `meeting.summarized` (or `meeting.transcribed` if that one is not
+  offered); save, then **Send test**;
+- **Webhook working** once the first delivery with a good signature arrives
+  (the test or a real meeting), or "Waiting for the first delivery".
+
+Pasting a new key later ("Replace the key") keeps the address and the secret
+Fireflies holds. **Disconnect the webhook** removes the key and the secret;
+the account, its rules and the items kept stay.
+
+**A delivery.** Fireflies posts `{event, meeting_id, timestamp}` (V1:
+`{meetingId, eventType}`). The Engine checks the signature, answers at once,
+then makes ONE GraphQL call for that meeting (sentences, summary,
+participants, date, title, channels) and builds the body the way the ingest
+skill does: the participants line, the summary (overview, notes, action
+items, keywords), then the full transcript, one `speaker: text` line each. The
+item goes through the same database path as `record_source_item`, so **these
+rules decide** exactly as for the plugin: kept under the rule's topic or
+private, or left out (nothing stored) when no rule includes it. Source id =
+the Fireflies meeting id: the same meeting delivered twice is stored once, a
+changed meeting is a new version. A bot joining, an unknown event, or a test
+id Fireflies does not know stores nothing.
+
+**Nothing cut.** A body over the 500,000-character item limit is stored in
+linked parts: part 1 keeps the meeting id, part k is `<id>#part<k>`, each
+starts with one line "(Part k of n of this meeting; ...)" and carries
+`{meeting_id, part, parts}` in its metadata. The parts joined (headers
+dropped) are the whole body, character for character. Every part has the
+meeting's metadata, so the rules decide all parts the same way.
+
+**Missed meetings.** Every fetch is recorded (meeting id, status, a short
+reason code; never text). A failed fetch, or one still pending after 15
+minutes (the Engine stopped half way), shows as "N meetings missed" with the
+reason and a **Fetch again** button that fetches those meetings by id.
+
+**Older meetings.** "Bring in the last 30 days" / "90 days": once, only when
+the person presses it. One list call (50 a page, at most 500 meetings), then
+one fetch per meeting not already stored, oldest first. Fireflies limits API
+calls per key; on a rate limit the backfill stops and the rest show as
+missed, to fetch again later. Nothing in the Engine polls Fireflies on a
+timer.
+
+**The plugin skips it.** `get_ingest_plan` for a webhook-fed Fireflies
+account returns `handled_by_webhook: true` (and `skip`, `skip_rule`): the
+scheduled ingest reports the channels for the rule builder and hands over
+nothing, and `schedule-setup` does not schedule a task for it.
 
 ## One topic per page
 

@@ -66,6 +66,15 @@ tags). For Gmail the screen gives a prompt to paste into Claude that
 suggests the rules from who the person mails, with their picks ticked
 ([source-rules.md](source-rules.md#suggested-from-your-mail)).
 
+Fireflies can also come in with no Claude at all: on **Sources**, **Connect
+Fireflies**, paste the Fireflies API key, then paste the webhook address and
+signing secret the Engine shows into Fireflies (**Integrations > API >
+Webhooks (V2)**, event `meeting.summarized`). Each finished meeting is
+posted to the Engine, which fetches it in full (one call), never cuts it (a
+very long one is stored in linked parts) and keeps it only if the person's
+rules include it. Missed meetings show on the account page with a **Fetch
+again** button ([source-rules.md](source-rules.md#fireflies-by-webhook)).
+
 A source is on when `enabled: true` is set for it in the config.
 `python -m kbe deploy render --server-mode` writes one scheduled job per enabled source (server mode; without it the app is the service alone, see `docs/operations.md`, "Server mode").
 `python -m kbe sources list` shows the enabled sources and each one's last
